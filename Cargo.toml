@@ -1,13 +1,13 @@
 [package]
 name = "tensor-man"
 description = "A small utility to inspect and validate safetensors and ONNX files."
-authors = ["Simone Margaritelli (evilsocket@gmail.com)"]
+authors = ["Simone Margaritelli (simone@dreadnode.io)"]
 version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0"
 readme = "README.md"
-repository = "https://github.com/evilsocket/tman"
-homepage = "https://github.com/evilsocket/tman"
+repository = "https://github.com/dreadnode/tman"
+homepage = "https://github.com/dreadnode/tman"
 
 [[bin]]
 name = "tman"
