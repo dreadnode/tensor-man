@@ -1,5 +1,5 @@
 [package]
-name = "tman"
+name = "tensor-man"
 description = "A small utility to inspect and validate safetensors and ONNX files."
 authors = ["Simone Margaritelli (evilsocket@gmail.com)"]
 version = "0.1.0"
@@ -8,6 +8,10 @@ license = "GPL-3.0"
 readme = "README.md"
 repository = "https://github.com/evilsocket/tman"
 homepage = "https://github.com/evilsocket/tman"
+
+[[bin]]
+name = "tman"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.91"

@@ -1,3 +1,4 @@
 /target
 /test-data
 .DS_Store
+/release.py

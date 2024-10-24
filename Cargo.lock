@@ -544,6 +544,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "tensor-man"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "clap",
+ "humansize",
+ "memmap2",
+ "protobuf",
+ "protobuf-codegen",
+ "rayon",
+ "ring",
+ "safetensors",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -561,24 +579,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "tman"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64",
- "clap",
- "humansize",
- "memmap2",
- "protobuf",
- "protobuf-codegen",
- "rayon",
- "ring",
- "safetensors",
- "serde",
- "serde_json",
 ]
 
 [[package]]
