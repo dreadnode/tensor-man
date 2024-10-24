@@ -6,6 +6,8 @@ mod inspect;
 
 pub(crate) use inspect::*;
 
+use crate::core::FileType;
+
 #[derive(Debug, Parser)]
 #[clap(name = "stman", version)]
 pub(crate) struct Args {
@@ -27,6 +29,9 @@ pub(crate) enum Command {
     Inspect {
         /// Safetensors file to inspect.
         file_path: PathBuf,
+        /// Override the file format detection by file extension.
+        #[clap(long)]
+        format: Option<FileType>,
         /// Detail level.
         #[clap(long, short = 'D', default_value = "brief")]
         detail: DetailLevel,

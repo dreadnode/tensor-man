@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, fmt, path::PathBuf};
 
+use clap::ValueEnum;
 use serde::Serialize;
 
 pub(crate) mod onnx;
@@ -16,7 +17,7 @@ pub(crate) struct TensorDescriptor {
     pub metadata: Metadata,
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, ValueEnum)]
 pub(crate) enum FileType {
     #[default]
     Unknown,
@@ -24,10 +25,24 @@ pub(crate) enum FileType {
     ONNX,
 }
 
+impl FileType {
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, FileType::Unknown)
+    }
+
+    pub fn is_safetensors(&self) -> bool {
+        matches!(self, FileType::SafeTensors)
+    }
+
+    pub fn is_onnx(&self) -> bool {
+        matches!(self, FileType::ONNX)
+    }
+}
+
 impl fmt::Display for FileType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FileType::Unknown => write!(f, "Unknown"),
+            FileType::Unknown => write!(f, "unknown"),
             FileType::SafeTensors => write!(f, "SafeTensors"),
             FileType::ONNX => write!(f, "ONNX"),
         }

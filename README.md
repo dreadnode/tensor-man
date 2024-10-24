@@ -54,6 +54,15 @@ Save the output as JSON:
 tman inspect /path/to/whatever/llama-3.1-8b-instruct.onnx -D full --to-json output.json
 ```
 
+For the full list of commands and options, run:
+
+```bash
+tman --help
+
+# get command specific help
+tman inspect --help
+```
+
 ## License
 
 This tool is released under the GPL 3 license. To see the licenses of the project dependencies, install cargo license with `cargo install cargo-license` and then run `cargo license`.

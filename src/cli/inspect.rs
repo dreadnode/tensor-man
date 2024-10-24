@@ -1,28 +1,39 @@
 use std::path::PathBuf;
 
+use crate::core::FileType;
+
 use super::DetailLevel;
 
 pub(crate) fn inspect(
     file_path: PathBuf,
     detail: DetailLevel,
+    format: Option<FileType>,
     filter: Option<String>,
     to_json: Option<PathBuf>,
 ) -> anyhow::Result<()> {
     println!(
-        "Inspecting {:?} (detail={:?} filter={:?}):\n",
-        file_path, detail, filter
+        "Inspecting {:?} (detail={:?}{}):\n",
+        file_path,
+        detail,
+        filter
+            .as_ref()
+            .map(|f| format!(" filter_by={:?}", f))
+            .unwrap_or("".to_string())
     );
 
+    let forced_format = format.unwrap_or(FileType::Unknown);
     let file_ext = file_path
         .extension()
-        .ok_or_else(|| anyhow::anyhow!("could not get file extension"))?
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("")
         .to_ascii_lowercase();
 
     // TODO: check if file_path is a safetensors index (or model path) and iterate if so
 
-    let inspection = if file_ext == "safetensors" {
+    let inspection = if forced_format.is_safetensors() || file_ext == "safetensors" {
         crate::core::safetensors::inspect(file_path, detail, filter)?
-    } else if file_ext == "onnx" {
+    } else if forced_format.is_onnx() || file_ext == "onnx" {
         crate::core::onnx::inspect(file_path, detail, filter)?
     } else {
         anyhow::bail!("unsupported file extension: {:?}", file_ext)
