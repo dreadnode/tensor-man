@@ -1,5 +1,11 @@
 An utility to inspect and validate [safetensors](https://github.com/huggingface/safetensors) and [ONNX](https://onnx.ai/) files.
 
+## Install with Cargo
+
+```bash
+cargo install tensor-man
+```
+
 ## Build Docker image
 
 To build the Docker image for the tool, run:
