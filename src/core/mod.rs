@@ -17,6 +17,7 @@ pub(crate) struct TensorDescriptor {
     pub metadata: Metadata,
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Default, Serialize, ValueEnum)]
 pub(crate) enum FileType {
     #[default]
@@ -25,6 +26,7 @@ pub(crate) enum FileType {
     ONNX,
 }
 
+#[allow(dead_code)]
 impl FileType {
     pub fn is_unknown(&self) -> bool {
         matches!(self, FileType::Unknown)

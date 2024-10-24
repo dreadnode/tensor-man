@@ -1,20 +1,14 @@
 use clap::Parser;
-use cli::{Args, Command};
+use cli::{Arguments, Command};
 
 mod cli;
 mod core;
 
 fn main() {
-    let args = Args::parse();
+    let args = Arguments::parse();
 
     let ret = match args.command {
-        Command::Inspect {
-            file_path,
-            detail,
-            format,
-            filter,
-            to_json,
-        } => cli::inspect(file_path, detail, format, filter, to_json),
+        Command::Inspect(args) => cli::inspect(args),
     };
 
     if let Err(e) = ret {
