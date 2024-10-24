@@ -60,6 +60,12 @@ Save the output as JSON:
 tman inspect /path/to/whatever/llama-3.1-8b-instruct.onnx -D full --to-json output.json
 ```
 
+Generate a .dot file for the execution graph of an ONNX model:
+
+```bash
+tman graph /path/to/whatever/tinyyolov2-8.onnx --output tinyyolov2-8.dot
+```
+
 For the full list of commands and options, run:
 
 ```bash

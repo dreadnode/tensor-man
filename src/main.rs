@@ -9,6 +9,7 @@ fn main() {
 
     let ret = match args.command {
         Command::Inspect(args) => cli::inspect(args),
+        Command::Graph(args) => cli::graph(args),
     };
 
     if let Err(e) = ret {
