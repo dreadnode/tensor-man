@@ -1,5 +1,6 @@
 use std::{collections::HashSet, path::PathBuf};
 
+use gguf::GGUFTensorInfo;
 use rayon::prelude::*;
 
 use crate::{
@@ -8,6 +9,26 @@ use crate::{
 };
 
 use super::data_type_bits;
+
+fn build_tensor_descriptor(t_info: &GGUFTensorInfo) -> TensorDescriptor {
+    TensorDescriptor {
+        id: Some(t_info.name.to_string()),
+        shape: t_info.dimensions.iter().map(|d| *d as usize).collect(),
+        dtype: format!("{:?}", t_info.tensor_type),
+        size: if t_info.dimensions.is_empty() {
+            0
+        } else {
+            (data_type_bits(t_info.tensor_type)
+                * t_info
+                    .dimensions
+                    .iter()
+                    .map(|d| *d as usize)
+                    .product::<usize>())
+                / 8
+        },
+        metadata: Metadata::new(),
+    }
+}
 
 pub(crate) fn inspect(
     file_path: PathBuf,
@@ -78,35 +99,13 @@ pub(crate) fn inspect(
     }
 
     if matches!(detail, DetailLevel::Full) {
-        let mut tensor_descriptors = Vec::new();
-
-        for t_info in &gguf.tensors {
-            if let Some(filter) = &filter {
-                if !t_info.name.contains(filter) {
-                    continue;
-                }
-            }
-
-            tensor_descriptors.push(TensorDescriptor {
-                id: Some(t_info.name.to_string()),
-                shape: t_info.dimensions.iter().map(|d| *d as usize).collect(),
-                dtype: format!("{:?}", t_info.tensor_type),
-                size: if t_info.dimensions.is_empty() {
-                    0
-                } else {
-                    (data_type_bits(t_info.tensor_type)
-                        * t_info
-                            .dimensions
-                            .iter()
-                            .map(|d| *d as usize)
-                            .product::<usize>())
-                        / 8
-                },
-                metadata: Metadata::new(),
-            });
-        }
-
-        inspection.tensors = Some(tensor_descriptors);
+        inspection.tensors = Some(
+            gguf.tensors
+                .par_iter()
+                .filter(|t_info| filter.as_ref().map_or(true, |f| t_info.name.contains(f)))
+                .map(build_tensor_descriptor)
+                .collect(),
+        );
     }
 
     Ok(inspection)

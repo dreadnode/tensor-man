@@ -5,11 +5,21 @@ use std::{
 
 use rayon::prelude::*;
 
-use safetensors::SafeTensors;
+use safetensors::{tensor::TensorInfo, SafeTensors};
 
 use crate::{cli::DetailLevel, core::TensorDescriptor};
 
 use super::{FileType, Inspection};
+
+fn build_tensor_descriptor(tensor_id: &str, tensor_info: &TensorInfo) -> TensorDescriptor {
+    TensorDescriptor {
+        id: Some(tensor_id.to_string()),
+        shape: tensor_info.shape.clone(),
+        dtype: format!("{:?}", &tensor_info.dtype),
+        size: tensor_info.data_offsets.1 - tensor_info.data_offsets.0,
+        metadata: super::Metadata::new(),
+    }
+}
 
 pub(crate) fn inspect(
     file_path: PathBuf,
@@ -78,25 +88,13 @@ pub(crate) fn inspect(
         // sort by offset
         tensors.sort_by_key(|(_, info)| info.data_offsets.0);
 
-        let mut tensor_descriptors = Vec::new();
-
-        for (tensor_id, tensor_info) in tensors {
-            if let Some(filter) = &filter {
-                if !tensor_id.contains(filter) {
-                    continue;
-                }
-            }
-
-            tensor_descriptors.push(TensorDescriptor {
-                id: Some(tensor_id.to_string()),
-                shape: tensor_info.shape.clone(),
-                dtype: format!("{:?}", &tensor_info.dtype),
-                size: tensor_info.data_offsets.1 - tensor_info.data_offsets.0,
-                metadata: super::Metadata::new(),
-            });
-        }
-
-        inspection.tensors = Some(tensor_descriptors);
+        inspection.tensors = Some(
+            tensors
+                .par_iter()
+                .filter(|(tensor_id, _)| filter.as_ref().map_or(true, |f| tensor_id.contains(f)))
+                .map(|(tensor_id, tensor_info)| build_tensor_descriptor(tensor_id, tensor_info))
+                .collect(),
+        );
     }
 
     Ok(inspection)

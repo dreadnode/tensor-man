@@ -6,7 +6,43 @@ use rayon::prelude::*;
 
 use crate::{cli::DetailLevel, core::Metadata};
 
-use super::{data_type_bits, data_type_string, protos, FileType, Inspection, TensorDescriptor};
+use super::{
+    data_type_bits, data_type_string,
+    protos::{self, TensorProto},
+    FileType, Inspection, TensorDescriptor,
+};
+
+fn build_tensor_descriptor(tensor: &TensorProto) -> TensorDescriptor {
+    let mut metadata = Metadata::new();
+    if !tensor.doc_string.is_empty() {
+        metadata.insert("doc_string".to_string(), tensor.doc_string.clone());
+    }
+
+    if tensor.data_location.value() == DataLocation::EXTERNAL as i32 {
+        metadata.insert("data_location".to_string(), "external".to_string());
+        if let Some(external_data) = tensor.external_data.first() {
+            metadata.insert("location".to_string(), external_data.value.clone());
+        }
+    }
+
+    tensor.metadata_props.iter().for_each(|prop| {
+        metadata.insert(prop.key.clone(), prop.value.clone());
+    });
+
+    TensorDescriptor {
+        id: Some(tensor.name.to_string()),
+        shape: tensor.dims.iter().map(|d| *d as usize).collect(),
+        dtype: data_type_string(tensor.data_type).to_string(),
+        size: if tensor.dims.is_empty() {
+            0
+        } else {
+            (data_type_bits(tensor.data_type)
+                * tensor.dims.iter().map(|d| *d as usize).product::<usize>())
+                / 8
+        },
+        metadata,
+    }
+}
 
 pub(crate) fn inspect(
     file_path: PathBuf,
@@ -109,47 +145,15 @@ pub(crate) fn inspect(
     });
 
     if matches!(detail, DetailLevel::Full) {
-        let mut tensor_descriptors = Vec::new();
-
-        for tensor in onnx_model.graph.initializer.iter() {
-            if let Some(filter) = &filter {
-                if !tensor.name.contains(filter) {
-                    continue;
-                }
-            }
-
-            let mut metadata = Metadata::new();
-            if !tensor.doc_string.is_empty() {
-                metadata.insert("doc_string".to_string(), tensor.doc_string.clone());
-            }
-
-            if tensor.data_location.value() == DataLocation::EXTERNAL as i32 {
-                metadata.insert("data_location".to_string(), "external".to_string());
-                if let Some(external_data) = tensor.external_data.first() {
-                    metadata.insert("location".to_string(), external_data.value.clone());
-                }
-            }
-
-            tensor.metadata_props.iter().for_each(|prop| {
-                metadata.insert(prop.key.clone(), prop.value.clone());
-            });
-
-            tensor_descriptors.push(TensorDescriptor {
-                id: Some(tensor.name.to_string()),
-                shape: tensor.dims.iter().map(|d| *d as usize).collect(),
-                dtype: data_type_string(tensor.data_type).to_string(),
-                size: if tensor.dims.is_empty() {
-                    0
-                } else {
-                    (data_type_bits(tensor.data_type)
-                        * tensor.dims.iter().map(|d| *d as usize).product::<usize>())
-                        / 8
-                },
-                metadata,
-            });
-        }
-
-        inspection.tensors = Some(tensor_descriptors);
+        inspection.tensors = Some(
+            onnx_model
+                .graph
+                .initializer
+                .par_iter()
+                .filter(|t_info| filter.as_ref().map_or(true, |f| t_info.name.contains(f)))
+                .map(build_tensor_descriptor)
+                .collect(),
+        );
     }
 
     Ok(inspection)
