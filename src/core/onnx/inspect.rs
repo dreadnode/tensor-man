@@ -69,7 +69,7 @@ pub(crate) fn inspect(
     inspection.unique_dtypes = onnx_model
         .graph
         .initializer
-        .iter()
+        .par_iter()
         .map(|t| data_type_string(t.data_type).to_string())
         .collect::<HashSet<_>>()
         .into_iter()
