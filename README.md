@@ -1,4 +1,4 @@
-An utility to inspect and validate [safetensors](https://github.com/huggingface/safetensors) and [ONNX](https://onnx.ai/) files.
+`tensor-man` is an utility to inspect and validate [safetensors](https://github.com/huggingface/safetensors), [ONNX](https://onnx.ai/) and [GGUF](https://huggingface.co/docs/hub/gguf) files.
 
 ## Install with Cargo
 
@@ -57,7 +57,7 @@ tman inspect /path/to/whatever/llama-3.1-8b-instruct.onnx -D full --filter "q_pr
 Save the output as JSON:
 
 ```bash
-tman inspect /path/to/whatever/llama-3.1-8b-instruct.onnx -D full --to-json output.json
+tman inspect /path/to/whatever/llama-3.1-8b-instruct.gguf -D full --to-json output.json
 ```
 
 Generate a .dot file for the execution graph of an ONNX model:

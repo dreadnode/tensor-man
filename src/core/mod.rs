@@ -3,6 +3,7 @@ use std::{collections::BTreeMap, fmt, path::PathBuf};
 use clap::ValueEnum;
 use serde::Serialize;
 
+pub(crate) mod gguf;
 pub(crate) mod onnx;
 pub(crate) mod safetensors;
 
@@ -24,6 +25,7 @@ pub(crate) enum FileType {
     Unknown,
     SafeTensors,
     ONNX,
+    GGUF,
 }
 
 #[allow(dead_code)]
@@ -39,6 +41,10 @@ impl FileType {
     pub fn is_onnx(&self) -> bool {
         matches!(self, FileType::ONNX)
     }
+
+    pub fn is_gguf(&self) -> bool {
+        matches!(self, FileType::GGUF)
+    }
 }
 
 impl fmt::Display for FileType {
@@ -47,6 +53,7 @@ impl fmt::Display for FileType {
             FileType::Unknown => write!(f, "unknown"),
             FileType::SafeTensors => write!(f, "SafeTensors"),
             FileType::ONNX => write!(f, "ONNX"),
+            FileType::GGUF => write!(f, "GGUF"),
         }
     }
 }

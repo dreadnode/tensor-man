@@ -26,6 +26,8 @@ pub(crate) fn inspect(args: InspectArgs) -> anyhow::Result<()> {
         crate::core::safetensors::inspect(args.file_path, args.detail, args.filter)?
     } else if forced_format.is_onnx() || file_ext == "onnx" {
         crate::core::onnx::inspect(args.file_path, args.detail, args.filter)?
+    } else if forced_format.is_gguf() || file_ext == "gguf" {
+        crate::core::gguf::inspect(args.file_path, args.detail, args.filter)?
     } else {
         anyhow::bail!("unsupported file extension: {:?}", file_ext)
     };
