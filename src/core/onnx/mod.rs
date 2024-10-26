@@ -8,31 +8,31 @@ pub(crate) use graph::*;
 pub(crate) use inspect::*;
 
 #[inline]
-fn data_type_bytes(dtype: i32) -> usize {
+fn data_type_bits(dtype: i32) -> usize {
     match dtype {
-        1 => 4,   // float
-        2 => 1,   // uint8_t
-        3 => 1,   // int8_t
-        4 => 2,   // uint16_t
-        5 => 2,   // int16_t
-        6 => 4,   // int32_t
-        7 => 8,   // int64_t
-        8 => 1,   // string
-        9 => 1,   // bool
-        10 => 2,  // FLOAT16
-        11 => 8,  // DOUBLE
-        12 => 4,  // UINT32
-        13 => 8,  // UINT64
-        14 => 8,  // COMPLEX64
-        15 => 16, // COMPLEX128
-        16 => 2,  // BFLOAT16
-        17 => 1,  // FLOAT8E4M3FN
-        18 => 1,  // FLOAT8E4M3FNUZ
-        19 => 1,  // FLOAT8E5M2
-        20 => 1,  // FLOAT8E5M2FNUZ
-        21 => 1,  // UINT4 (4-bit values are packed, returning 1 as a placeholder)
-        22 => 1,  // INT4 (4-bit values are packed, returning 1 as a placeholder)
-        23 => 1,  // FLOAT4E2M1 (4-bit values are packed, returning 1 as a placeholder)
+        1 => 32,   // float
+        2 => 8,    // uint8_t
+        3 => 8,    // int8_t
+        4 => 16,   // uint16_t
+        5 => 16,   // int16_t
+        6 => 32,   // int32_t
+        7 => 64,   // int64_t
+        8 => 8,    // string (assuming 8 bits per character)
+        9 => 8,    // bool (typically 8 bits in most systems)
+        10 => 16,  // FLOAT16
+        11 => 64,  // DOUBLE
+        12 => 32,  // UINT32
+        13 => 64,  // UINT64
+        14 => 64,  // COMPLEX64 (two 32-bit floats)
+        15 => 128, // COMPLEX128 (two 64-bit floats)
+        16 => 16,  // BFLOAT16
+        17 => 8,   // FLOAT8E4M3FN
+        18 => 8,   // FLOAT8E4M3FNUZ
+        19 => 8,   // FLOAT8E5M2
+        20 => 8,   // FLOAT8E5M2FNUZ
+        21 => 4,   // UINT4
+        22 => 4,   // INT4
+        23 => 4,   // FLOAT4E2M1
         _ => panic!("Unsupported data type: {}", dtype),
     }
 }

@@ -6,7 +6,7 @@ use rayon::prelude::*;
 
 use crate::{cli::DetailLevel, core::Metadata};
 
-use super::{data_type_bytes, data_type_string, protos, FileType, Inspection, TensorDescriptor};
+use super::{data_type_bits, data_type_string, protos, FileType, Inspection, TensorDescriptor};
 
 pub(crate) fn inspect(
     file_path: PathBuf,
@@ -44,10 +44,11 @@ pub(crate) fn inspect(
             if t.dims.is_empty() {
                 0
             } else {
-                data_type_bytes(t.data_type) * t.dims.iter().map(|d| *d as usize).product::<usize>()
+                data_type_bits(t.data_type) * t.dims.iter().map(|d| *d as usize).product::<usize>()
             }
         })
-        .sum::<usize>();
+        .sum::<usize>()
+        / 8;
 
     inspection.unique_shapes = onnx_model
         .graph
@@ -140,8 +141,9 @@ pub(crate) fn inspect(
                 size: if tensor.dims.is_empty() {
                     0
                 } else {
-                    data_type_bytes(tensor.data_type)
-                        * tensor.dims.iter().map(|d| *d as usize).product::<usize>()
+                    (data_type_bits(tensor.data_type)
+                        * tensor.dims.iter().map(|d| *d as usize).product::<usize>())
+                        / 8
                 },
                 metadata,
             });
