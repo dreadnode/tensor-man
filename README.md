@@ -36,6 +36,8 @@ sudo cp target/release/tman /usr/local/bin/
 
 ## Usage
 
+### Inspect
+
 Inspect a file and print a brief summary:
 
 ```bash
@@ -60,11 +62,35 @@ Save the output as JSON:
 tman inspect /path/to/whatever/llama-3.1-8b-instruct.gguf -D full --to-json output.json
 ```
 
+### Sign and Verify
+
+Create a signing key:
+
+```bash
+tman create-key -O /path/to/output
+```
+
+Sign a model (will automatically include and sign external data files if referenced by the format):
+
+```bash
+tman sign /path/to/whatever/tinyyolov2-8.onnx -K /path/to/private.key
+```
+
+Verify a signed model:
+
+```bash
+tman verify /path/to/whatever/tinyyolov2-8.onnx -K /path/to/public.key
+```
+
+### Inference Graph
+
 Generate a .dot file for the execution graph of an ONNX model:
 
 ```bash
 tman graph /path/to/whatever/tinyyolov2-8.onnx --output tinyyolov2-8.dot
 ```
+
+### More
 
 For the full list of commands and options, run:
 
