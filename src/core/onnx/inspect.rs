@@ -12,6 +12,39 @@ use super::{
     FileType, Inspection, TensorDescriptor,
 };
 
+pub(crate) fn paths_to_sign(file_path: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {
+    let base_path = file_path
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("no parent path"))?;
+    let mut file = std::fs::File::open(file_path)?;
+    let onnx_model: ModelProto = Message::parse_from_reader(&mut file)?;
+
+    // ONNX files can contain external data
+    let external_paths: HashSet<PathBuf> = onnx_model
+        .graph
+        .initializer
+        .par_iter()
+        .filter(|t| t.data_location.value() == DataLocation::EXTERNAL as i32)
+        .filter_map(|t| {
+            t.external_data
+                .first()
+                .map(|data| PathBuf::from(&data.value))
+                .map(|p| {
+                    if p.is_relative() {
+                        base_path.join(p)
+                    } else {
+                        p
+                    }
+                })
+        })
+        .collect();
+
+    let mut paths = vec![file_path.clone()];
+    paths.extend(external_paths);
+
+    Ok(paths)
+}
+
 fn build_tensor_descriptor(tensor: &TensorProto) -> TensorDescriptor {
     let mut metadata = Metadata::new();
     if !tensor.doc_string.is_empty() {

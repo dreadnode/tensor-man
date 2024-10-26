@@ -1,5 +1,7 @@
 mod inspect;
 
+use std::path::{Path, PathBuf};
+
 use gguf::GGMLType;
 pub(crate) use inspect::*;
 
@@ -25,4 +27,9 @@ fn data_type_bits(dtype: GGMLType) -> usize {
         GGMLType::I32 => 32,
         GGMLType::Count => 32, // Assuming Count is 32-bit, adjust if needed
     }
+}
+
+pub(crate) fn paths_to_sign(file_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+    // GGUF are self contained
+    Ok(vec![file_path.to_path_buf()])
 }

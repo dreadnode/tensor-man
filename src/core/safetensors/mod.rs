@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeMap, HashSet},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use rayon::prelude::*;
@@ -10,6 +10,11 @@ use safetensors::{tensor::TensorInfo, SafeTensors};
 use crate::{cli::DetailLevel, core::TensorDescriptor};
 
 use super::{FileType, Inspection};
+
+pub(crate) fn paths_to_sign(file_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+    // safetensors are self contained
+    Ok(vec![file_path.to_path_buf()])
+}
 
 fn build_tensor_descriptor(tensor_id: &str, tensor_info: &TensorInfo) -> TensorDescriptor {
     TensorDescriptor {

@@ -7,6 +7,8 @@ pub(crate) mod gguf;
 pub(crate) mod onnx;
 pub(crate) mod safetensors;
 
+pub(crate) mod signing;
+
 pub(crate) type Metadata = BTreeMap<String, String>;
 
 #[derive(Debug, Clone, Default, Serialize)]
