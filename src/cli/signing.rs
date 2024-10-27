@@ -1,4 +1,4 @@
-use crate::core::{signing::Manifest, FileType};
+use crate::core::{safetensors::is_safetensors_index, signing::Manifest, FileType};
 
 use super::{CreateKeyArgs, SignArgs, VerifyArgs};
 
@@ -18,7 +18,10 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
         .unwrap_or("")
         .to_ascii_lowercase();
 
-    let paths_to_sign = if forced_format.is_safetensors() || file_ext == "safetensors" {
+    let mut paths_to_sign = if forced_format.is_safetensors()
+        || file_ext == "safetensors"
+        || is_safetensors_index(&args.file_path)
+    {
         crate::core::safetensors::paths_to_sign(&args.file_path)?
     } else if forced_format.is_onnx() || file_ext == "onnx" {
         crate::core::onnx::paths_to_sign(&args.file_path)?
@@ -28,19 +31,14 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
         anyhow::bail!("unsupported file extension: {:?}", file_ext)
     };
 
-    println!(
-        "Signing {} ...",
-        paths_to_sign
-            .iter()
-            .map(|p| p.to_string_lossy())
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
+    paths_to_sign.sort();
 
     let mut manifest = Manifest::for_signing(signing_key);
 
     // compute checksums for all files
     for path in paths_to_sign {
+        println!("Signing {} ...", path.display());
+
         manifest.compute_checksum(&path)?;
     }
 
@@ -84,7 +82,10 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
     let raw = std::fs::read(&args.key_path)?;
     let mut manifest = Manifest::for_verifying(raw);
 
-    let paths_to_verify = if forced_format.is_safetensors() || file_ext == "safetensors" {
+    let mut paths_to_verify = if forced_format.is_safetensors()
+        || file_ext == "safetensors"
+        || is_safetensors_index(&args.file_path)
+    {
         crate::core::safetensors::paths_to_sign(&args.file_path)?
     } else if forced_format.is_onnx() || file_ext == "onnx" {
         crate::core::onnx::paths_to_sign(&args.file_path)?
@@ -94,17 +95,12 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
         anyhow::bail!("unsupported file extension: {:?}", file_ext)
     };
 
-    println!(
-        "Verifying {} ...",
-        paths_to_verify
-            .iter()
-            .map(|p| p.to_string_lossy())
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
+    paths_to_verify.sort();
 
     // compute checksums for all files
     for path in paths_to_verify {
+        println!("Hashing {} ...", path.display());
+
         manifest.compute_checksum(&path)?;
     }
 

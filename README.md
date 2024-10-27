@@ -75,8 +75,10 @@ Then you can use the private key to sign a model (this will automatically includ
 ```bash
 # this will generate the tinyyolov2-8.signature file
 tman sign /path/to/whatever/tinyyolov2-8.onnx -K /path/to/private.key
-```
 
+# you can provide a safetensors index file and all files referenced by it will be signed as well
+tman sign /path/to/whatever/Meta-Llama-3-8B/model.safetensors.index.json -K /path/to/private.key
+```
 And the public one to verify the signature:
 
 ```bash

@@ -1,19 +1,60 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     path::{Path, PathBuf},
 };
 
 use rayon::prelude::*;
 
 use safetensors::{tensor::TensorInfo, SafeTensors};
+use serde::Deserialize;
 
 use crate::{cli::DetailLevel, core::TensorDescriptor};
 
 use super::{FileType, Inspection};
 
+#[derive(Debug, Deserialize)]
+struct TensorIndex {
+    weight_map: HashMap<String, String>,
+}
+
+pub(crate) fn is_safetensors_index(file_path: &Path) -> bool {
+    file_path
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .ends_with(".safetensors.index.json")
+}
+
 pub(crate) fn paths_to_sign(file_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
-    // safetensors are self contained
-    Ok(vec![file_path.to_path_buf()])
+    if is_safetensors_index(file_path) {
+        // load unique paths from index
+        let base_path = file_path
+            .parent()
+            .ok_or_else(|| anyhow::anyhow!("no parent path"))?;
+
+        let index = std::fs::read_to_string(file_path)?;
+        let index: TensorIndex = serde_json::from_str(&index)?;
+
+        let unique: HashSet<PathBuf> = index
+            .weight_map
+            .values()
+            .map(PathBuf::from)
+            .map(|p| {
+                if p.is_relative() {
+                    base_path.join(p)
+                } else {
+                    p
+                }
+            })
+            .collect();
+
+        let mut paths = vec![file_path.to_path_buf()];
+        paths.extend(unique);
+        Ok(paths)
+    } else {
+        // safetensors are self contained
+        Ok(vec![file_path.to_path_buf()])
+    }
 }
 
 fn build_tensor_descriptor(tensor_id: &str, tensor_info: &TensorInfo) -> TensorDescriptor {
