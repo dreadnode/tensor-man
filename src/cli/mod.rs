@@ -82,6 +82,9 @@ pub(crate) struct SignArgs {
     /// Output signature file. If not set the original file name will be used as base name.
     #[clap(long, short = 'O')]
     output: Option<PathBuf>,
+    /// Do not perform inspection of the file.
+    #[clap(long)]
+    no_inspection: bool,
 }
 
 #[derive(Debug, Args)]

@@ -1,4 +1,7 @@
-use crate::core::{signing::Manifest, FileType};
+use crate::{
+    cli::DetailLevel,
+    core::{signing::Manifest, FileType},
+};
 
 use super::{CreateKeyArgs, SignArgs, VerifyArgs};
 
@@ -28,6 +31,22 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
         anyhow::bail!("unsupported file extension: {:?}", file_ext)
     };
 
+    let inspection = if args.no_inspection {
+        None
+    } else {
+        Some(
+            if forced_format.is_safetensors() || file_ext == "safetensors" {
+                crate::core::safetensors::inspect(args.file_path.clone(), DetailLevel::Full, None)?
+            } else if forced_format.is_onnx() || file_ext == "onnx" {
+                crate::core::onnx::inspect(args.file_path.clone(), DetailLevel::Full, None)?
+            } else if forced_format.is_gguf() || file_ext == "gguf" {
+                crate::core::gguf::inspect(args.file_path.clone(), DetailLevel::Full, None)?
+            } else {
+                anyhow::bail!("unsupported file extension: {:?}", file_ext)
+            },
+        )
+    };
+
     println!(
         "Signing {} ...",
         paths_to_sign
@@ -37,7 +56,7 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
             .join(", ")
     );
 
-    let mut manifest = Manifest::for_signing(signing_key);
+    let mut manifest = Manifest::for_signing(signing_key, inspection);
 
     // compute checksums for all files
     for path in paths_to_sign {
@@ -82,7 +101,7 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
         .to_ascii_lowercase();
 
     let raw = std::fs::read(&args.key_path)?;
-    let mut manifest = Manifest::for_verifying(raw);
+    let mut manifest = Manifest::for_verifying(raw, None);
 
     let paths_to_verify = if forced_format.is_safetensors() || file_ext == "safetensors" {
         crate::core::safetensors::paths_to_sign(&args.file_path)?

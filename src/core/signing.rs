@@ -10,6 +10,8 @@ use ring::{
 };
 use serde::{Deserialize, Serialize};
 
+use super::Inspection;
+
 pub(crate) fn create_key(private_key: &Path, public_key: &Path) -> anyhow::Result<()> {
     println!("Generating Ed25519 private key ...");
 
@@ -76,6 +78,8 @@ pub(crate) struct Manifest {
     pub(crate) checksums: BTreeMap<String, String>,
     // hex-encoded signature of the checksums
     pub(crate) signature: String,
+    // inspection result
+    pub(crate) inspection: Option<Inspection>,
 
     #[serde(skip_serializing, skip_deserializing)]
     signing_key: Option<signature::Ed25519KeyPair>,
@@ -84,7 +88,10 @@ pub(crate) struct Manifest {
 }
 
 impl Manifest {
-    pub(crate) fn for_signing(signing_key: signature::Ed25519KeyPair) -> Self {
+    pub(crate) fn for_signing(
+        signing_key: signature::Ed25519KeyPair,
+        inspection: Option<Inspection>,
+    ) -> Self {
         let public_key = signing_key.public_key();
         let mut hasher = Blake2b512::new();
         hasher.update(public_key.as_ref());
@@ -104,10 +111,11 @@ impl Manifest {
             signature: String::new(),
             signing_key: Some(signing_key),
             verifying_key: None,
+            inspection,
         }
     }
 
-    pub(crate) fn for_verifying(public_key_bytes: Vec<u8>) -> Self {
+    pub(crate) fn for_verifying(public_key_bytes: Vec<u8>, inspection: Option<Inspection>) -> Self {
         let public_key = UnparsedPublicKey::new(&ED25519, public_key_bytes);
         let mut hasher = Blake2b512::new();
         hasher.update(public_key.as_ref());
@@ -127,6 +135,7 @@ impl Manifest {
             signature: String::new(),
             signing_key: None,
             verifying_key: Some(public_key),
+            inspection,
         }
     }
 
