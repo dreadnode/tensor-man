@@ -28,7 +28,8 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
     } else if forced_format.is_gguf() || file_ext == "gguf" {
         crate::core::gguf::paths_to_sign(&args.file_path)?
     } else {
-        anyhow::bail!("unsupported file extension: {:?}", file_ext)
+        println!("Warning: Unrecognized file format. Signing this file does not ensure that the model data will be signed in its entirety.");
+        vec![args.file_path.clone()]
     };
 
     paths_to_sign.sort();
@@ -92,7 +93,8 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
     } else if forced_format.is_gguf() || file_ext == "gguf" {
         crate::core::gguf::paths_to_sign(&args.file_path)?
     } else {
-        anyhow::bail!("unsupported file extension: {:?}", file_ext)
+        println!("Warning: Unrecognized file format. Verifying this file does not ensure that the model data will be verified in its entirety.");
+        vec![args.file_path.clone()]
     };
 
     paths_to_verify.sort();
