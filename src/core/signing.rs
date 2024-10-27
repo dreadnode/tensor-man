@@ -70,8 +70,11 @@ pub(crate) struct Manifest {
     pub(crate) signed_with: String,
     // hex-encoded public key of the signing key
     pub(crate) public_key: Option<String>,
+    // algorithms used for hashing and signing
     pub(crate) algorithms: Algorithms,
+    // checksums of the files
     pub(crate) checksums: BTreeMap<String, String>,
+    // hex-encoded signature of the checksums
     pub(crate) signature: String,
 
     #[serde(skip_serializing, skip_deserializing)]
@@ -113,7 +116,7 @@ impl Manifest {
         Self {
             version: Version::V1,
             signed_at: chrono::Utc::now().to_rfc3339(),
-            signed_with: format!("tensor-man v{}", env!("CARGO_PKG_VERSION")),
+            signed_with: format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
             // blake2b512 hash of the public key
             public_key: Some(hex::encode(hash)),
             algorithms: Algorithms {

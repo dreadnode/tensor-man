@@ -64,22 +64,27 @@ tman inspect /path/to/whatever/llama-3.1-8b-instruct.gguf -D full --to-json outp
 
 ### Sign and Verify
 
-Create a signing key:
+The tool allows you to generate an Ed25519 key pair to sign your models:
 
 ```bash
-tman create-key -O /path/to/output
+tman create-key --private-key private.key --public-key public.key
 ```
 
-Sign a model (will automatically include and sign external data files if referenced by the format):
+Then you can use the private key to sign a model (this will automatically include and sign external data files if referenced by the format):
 
 ```bash
+# this will generate the tinyyolov2-8.signature file
 tman sign /path/to/whatever/tinyyolov2-8.onnx -K /path/to/private.key
 ```
 
-Verify a signed model:
+And the public one to verify the signature:
 
 ```bash
+# will verify the signature in tinyyolov2-8.signature
 tman verify /path/to/whatever/tinyyolov2-8.onnx -K /path/to/public.key
+
+# will verify with an alternative signature file 
+tman verify /path/to/whatever/tinyyolov2-8.onnx -K /path/to/public.key --signature /path/to/your.signature
 ```
 
 ### Inference Graph

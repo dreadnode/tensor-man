@@ -91,10 +91,10 @@ pub(crate) struct VerifyArgs {
     /// Override the file format detection by file extension.
     #[clap(long)]
     format: Option<FileType>,
-    // Public key file.
+    /// Public key file.
     #[clap(long, short = 'K')]
     key_path: PathBuf,
-    // Signature file.
+    /// Signature file. If not set the file name will be used as base name.
     #[clap(long, short = 'S')]
     signature: Option<PathBuf>,
 }
