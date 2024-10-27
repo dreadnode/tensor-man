@@ -60,7 +60,7 @@ pub(crate) enum Version {
     V1,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Manifest {
     // version of the manifest format
     pub(crate) version: Version,
@@ -220,5 +220,192 @@ impl Manifest {
         self.verify_checksums(&ref_manifest.checksums)?;
         // verify signature
         self.verify_signature(&ref_manifest.signature)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    use super::*;
+
+    fn create_test_keypair() -> signature::Ed25519KeyPair {
+        let rng = rand::SystemRandom::new();
+        let pkcs8 = signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+        signature::Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap()
+    }
+
+    fn create_temp_file_with_content(content: &str) -> anyhow::Result<NamedTempFile> {
+        let mut temp_file = NamedTempFile::new()?;
+        temp_file.write_all(content.as_bytes())?;
+        temp_file.flush()?;
+        Ok(temp_file)
+    }
+
+    #[test]
+    fn test_will_create_a_signature() {
+        let keypair = create_test_keypair();
+        let mut manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+
+        manifest.compute_checksum(&temp_file.path()).unwrap();
+        let signature = manifest.create_signature().unwrap();
+
+        assert!(!signature.is_empty());
+
+        assert!(matches!(manifest.version, Version::V1));
+        assert!(manifest.signed_at.len() > 0);
+        assert!(manifest.signed_with.len() > 0);
+        assert!(manifest.public_key.is_some());
+        assert!(matches!(
+            manifest.algorithms.hash,
+            HashAlgorithm::BLAKE2b512
+        ));
+        assert!(matches!(
+            manifest.algorithms.signature,
+            SigningAlgorithm::Ed25519
+        ));
+
+        assert_eq!(manifest.checksums.len(), 1);
+        assert_eq!(manifest.checksums.values().next().unwrap(), "a71079d42853dea26e453004338670a53814b78137ffbed07603a41d76a483aa9bc33b582f77d30a65e6f29a896c0411f38312e1d66e0bf16386c86a89bea572");
+    }
+
+    #[test]
+    fn test_will_verify_correct_signature() {
+        let keypair = create_test_keypair();
+        let pub_key = keypair.public_key().as_ref().to_vec();
+
+        let mut ref_manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+
+        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
+        ref_manifest.create_signature().unwrap();
+
+        let mut manifest = Manifest::for_verifying(pub_key);
+
+        manifest.compute_checksum(&temp_file.path()).unwrap();
+
+        manifest.verify(&ref_manifest).unwrap();
+    }
+
+    #[test]
+    fn test_wont_verify_with_wrong_key() {
+        let keypair = create_test_keypair();
+        let other_keypair = create_test_keypair();
+        let pub_key = other_keypair.public_key().as_ref().to_vec();
+
+        let mut ref_manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+
+        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
+        ref_manifest.create_signature().unwrap();
+
+        let mut manifest = Manifest::for_verifying(pub_key);
+
+        manifest.compute_checksum(&temp_file.path()).unwrap();
+
+        assert!(manifest.verify(&ref_manifest).is_err());
+    }
+
+    #[test]
+    fn test_wont_verify_a_tampered_file() {
+        let keypair = create_test_keypair();
+        let pub_key = keypair.public_key().as_ref().to_vec();
+
+        let mut ref_manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+
+        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
+        ref_manifest.create_signature().unwrap();
+
+        let mut manifest = Manifest::for_verifying(pub_key);
+
+        let temp_file = create_temp_file_with_content("tost").unwrap();
+
+        manifest.compute_checksum(&temp_file.path()).unwrap();
+
+        assert!(manifest.verify(&ref_manifest).is_err());
+    }
+
+    #[test]
+    fn test_wont_verify_empty_file() {
+        let keypair = create_test_keypair();
+        let pub_key = keypair.public_key().as_ref().to_vec();
+
+        let mut ref_manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
+        ref_manifest.create_signature().unwrap();
+
+        let mut manifest = Manifest::for_verifying(pub_key);
+
+        let empty_file = create_temp_file_with_content("").unwrap();
+        manifest.compute_checksum(&empty_file.path()).unwrap();
+
+        assert!(manifest.verify(&ref_manifest).is_err());
+    }
+
+    #[test]
+    fn test_wont_verify_missing_file() {
+        let keypair = create_test_keypair();
+        let pub_key = keypair.public_key().as_ref().to_vec();
+
+        let mut ref_manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
+        ref_manifest.create_signature().unwrap();
+
+        let manifest = Manifest::for_verifying(pub_key);
+
+        // Don't compute any checksum, leaving manifest.checksums empty
+
+        assert!(manifest.verify(&ref_manifest).is_err());
+    }
+
+    #[test]
+    fn test_wont_verify_extra_file() {
+        let keypair = create_test_keypair();
+        let pub_key = keypair.public_key().as_ref().to_vec();
+
+        let mut ref_manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
+        ref_manifest.create_signature().unwrap();
+
+        let mut manifest = Manifest::for_verifying(pub_key);
+
+        // Compute checksum for original file
+        manifest.compute_checksum(&temp_file.path()).unwrap();
+
+        // Add checksum for an extra file
+        let extra_file = create_temp_file_with_content("extra").unwrap();
+        manifest.compute_checksum(&extra_file.path()).unwrap();
+
+        assert!(manifest.verify(&ref_manifest).is_err());
+    }
+
+    #[test]
+    fn test_wont_verify_without_signature() {
+        let keypair = create_test_keypair();
+        let pub_key = keypair.public_key().as_ref().to_vec();
+
+        let mut ref_manifest = Manifest::for_signing(keypair);
+
+        let temp_file = create_temp_file_with_content("test").unwrap();
+        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
+        // Deliberately skip creating signature
+
+        let mut manifest = Manifest::for_verifying(pub_key);
+        manifest.compute_checksum(&temp_file.path()).unwrap();
+
+        assert!(manifest.verify(&ref_manifest).is_err());
     }
 }
