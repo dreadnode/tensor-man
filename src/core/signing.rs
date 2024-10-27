@@ -133,7 +133,7 @@ impl Manifest {
 
         let mut hasher = Blake2b512::new();
         let mut file = std::fs::File::open(path)?;
-        let _bytes_hashed = std::io::copy(&mut file, &mut hasher)?;
+        let _ = std::io::copy(&mut file, &mut hasher)?;
         let hash_bytes = hasher.finalize();
         let hash = hex::encode(hash_bytes);
 
@@ -177,14 +177,19 @@ impl Manifest {
     }
 
     fn verify_checksums(&self, checksums: &BTreeMap<String, String>) -> anyhow::Result<()> {
-        for (path, expected_checksum) in checksums {
-            if !self.checksums.contains_key(path) {
-                return Err(anyhow::anyhow!("missing checksum for {}", path));
+        // check if all the required checksums are present, use the checksum value instead
+        // of the path as the file name might be different
+        let provided_checksums = checksums.values().collect::<Vec<&String>>();
+        for (path, required_checksum) in self.checksums.iter() {
+            if !provided_checksums.contains(&required_checksum) {
+                return Err(anyhow::anyhow!("missing or invalid checksum for {}", path));
             }
-
-            let actual_checksum = self.checksums.get(path).unwrap();
-            if actual_checksum != expected_checksum {
-                return Err(anyhow::anyhow!("checksum mismatch for {}", path));
+        }
+        // check if all the provided checksums are valid
+        let required_checksums = self.checksums.values().collect::<Vec<&String>>();
+        for (path, expected_checksum) in checksums {
+            if !required_checksums.contains(&expected_checksum) {
+                return Err(anyhow::anyhow!("invalid checksum for {}", path));
             }
         }
         Ok(())
