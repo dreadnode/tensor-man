@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, fmt, path::PathBuf};
 
 use clap::ValueEnum;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 pub(crate) mod gguf;
 pub(crate) mod onnx;
@@ -11,7 +11,7 @@ pub(crate) mod signing;
 
 pub(crate) type Metadata = BTreeMap<String, String>;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct TensorDescriptor {
     pub id: Option<String>,
     pub shape: Vec<usize>,
@@ -21,7 +21,7 @@ pub(crate) struct TensorDescriptor {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Clone, Default, Serialize, ValueEnum, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, ValueEnum)]
 pub(crate) enum FileType {
     #[default]
     Unknown,
@@ -62,7 +62,7 @@ impl fmt::Display for FileType {
 
 pub(crate) type Shape = Vec<usize>;
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct Inspection {
     pub file_path: PathBuf,
     pub file_type: FileType,
