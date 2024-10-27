@@ -10,19 +10,21 @@ use ring::{
 };
 use serde::{Deserialize, Serialize};
 
-pub(crate) fn create_key(output: &Path) -> anyhow::Result<()> {
-    println!("Generating Ed25519 key pair to {}...", output.display());
+pub(crate) fn create_key(private_key: &Path, public_key: &Path) -> anyhow::Result<()> {
+    println!("Generating Ed25519 private key ...");
 
     let rng = rand::SystemRandom::new();
     let pkcs8 = signature::Ed25519KeyPair::generate_pkcs8(&rng)
         .map_err(|e| anyhow::anyhow!("Failed to generate Ed25519 key pair: {}", e))?;
 
-    std::fs::write(output.join("private.key"), &pkcs8)?;
+    println!("Writing private key to {} ...", private_key.display());
+    std::fs::write(private_key, &pkcs8)?;
 
+    println!("Writing public key to {} ...", public_key.display());
     let pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8.as_ref())
         .map_err(|e| anyhow::anyhow!("Failed to parse Ed25519 key pair: {}", e))?;
 
-    std::fs::write(output.join("public.key"), pair.public_key())?;
+    std::fs::write(public_key, pair.public_key())?;
 
     Ok(())
 }

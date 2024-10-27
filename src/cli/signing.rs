@@ -3,7 +3,7 @@ use crate::core::{signing::Manifest, FileType};
 use super::{CreateKeyArgs, SignArgs, VerifyArgs};
 
 pub(crate) fn create_key(args: CreateKeyArgs) -> anyhow::Result<()> {
-    crate::core::signing::create_key(&args.output)
+    crate::core::signing::create_key(&args.private_key, &args.public_key)
 }
 
 pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
