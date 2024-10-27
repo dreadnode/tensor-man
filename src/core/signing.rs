@@ -145,8 +145,10 @@ impl Manifest {
             start.elapsed()
         ); */
 
-        self.checksums
-            .insert(path.to_string_lossy().to_string(), hash);
+        self.checksums.insert(
+            path.file_name().unwrap().to_string_lossy().to_string(),
+            hash,
+        );
         Ok(())
     }
 
