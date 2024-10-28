@@ -3,8 +3,7 @@ use crate::core::FileType;
 use super::InspectArgs;
 
 pub(crate) fn inspect(args: InspectArgs) -> anyhow::Result<()> {
-    let quiet = args.quiet.unwrap_or(false);
-    if !quiet {
+    if !args.quiet {
         println!(
             "Inspecting {:?} (detail={:?}{}):\n",
             args.file_path,
@@ -31,7 +30,7 @@ pub(crate) fn inspect(args: InspectArgs) -> anyhow::Result<()> {
         anyhow::bail!("unsupported file format")
     };
 
-    if !quiet {
+    if !args.quiet {
         println!("file type:     {}", inspection.file_type);
         println!("version:       {}", inspection.version);
         println!(
@@ -110,7 +109,7 @@ pub(crate) fn inspect(args: InspectArgs) -> anyhow::Result<()> {
         let json_str = serde_json::to_string_pretty(&inspection)?;
         std::fs::write(json_file_path, json_str)?;
 
-        if !quiet {
+        if !args.quiet {
             println!("\nsaved to {:?}", json_file_path);
         }
     }

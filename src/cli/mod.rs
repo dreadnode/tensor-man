@@ -56,7 +56,7 @@ pub(crate) struct InspectArgs {
     filter: Option<String>,
     /// Suppress inspection output.
     #[clap(long, short = 'Q')]
-    quiet: Option<bool>,
+    quiet: bool,
     /// Save as JSON to the specified file.
     #[clap(long, short = 'J')]
     to_json: Option<PathBuf>,
