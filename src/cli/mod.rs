@@ -54,6 +54,9 @@ pub(crate) struct InspectArgs {
     /// If the detail level is set to full, filter the tensors by this substring.
     #[clap(long, short = 'F')]
     filter: Option<String>,
+    /// Suppress inspection output.
+    #[clap(long, short = 'Q')]
+    quiet: Option<bool>,
     /// Save as JSON to the specified file.
     #[clap(long, short = 'J')]
     to_json: Option<PathBuf>,
