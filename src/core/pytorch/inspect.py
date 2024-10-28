@@ -19,7 +19,9 @@ model = torch.load(
     file_path, weights_only=True, mmap=True, map_location=torch.device("cpu")
 )
 
-model_metadata = model._metadata[""]
+all_metadata = getattr(model, "_metadata") if hasattr(model, "_metadata") else {}
+model_metadata = all_metadata[""] if "" in all_metadata else {}
+
 inspection = {
     "file_path": file_path,
     "file_type": "PyTorch",
@@ -56,11 +58,9 @@ for tensor_name, tensor in model.items():
                 "shape": shape,
                 "dtype": dtype,
                 "size": tensor.shape.numel() * tensor.element_size(),
-                "metadata": {
-                    k: str(v) for (k, v) in model._metadata[layer_name].items()
-                }
-                if layer_name in model._metadata
-                else None,
+                "metadata": {k: str(v) for (k, v) in all_metadata[layer_name].items()}
+                if layer_name in all_metadata
+                else {},
             }
         )
 
