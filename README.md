@@ -8,7 +8,7 @@
 * [PyTorch](https://pytorch.org/)
 
 > [!IMPORTANT]
-> Formats such as PyTorch are loaded and inspected in a networkless container in order to prevent unintended code execution on the host machine.
+> Formats such as PyTorch are loaded and inspected in a networkless Docker container in order to prevent unintended code execution on the host machine.
 
 ## Install with Cargo
 
