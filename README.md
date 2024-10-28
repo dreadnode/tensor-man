@@ -1,4 +1,4 @@
-`tensor-man` is an utility to inspect, validate, sign and verify machine learning model files.
+`tensor-man` is a utility to inspect, validate, sign and verify machine learning model files.
 
 ## Supported Formats
 
