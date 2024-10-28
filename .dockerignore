@@ -2,3 +2,6 @@
 /test-data
 .DS_Store
 /release.py
+__pycache__/
+*.py[cod]
+*$py.class

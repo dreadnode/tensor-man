@@ -51,6 +51,7 @@ impl Inspector {
     pub fn run(
         &self,
         file_path: PathBuf,
+        additional_files: Vec<String>,
         detail: DetailLevel,
         filter: Option<String>,
     ) -> anyhow::Result<Inspection> {
@@ -61,7 +62,9 @@ impl Inspector {
         self.build_if_needed()?;
 
         let file_path = file_path.canonicalize()?;
-        let mut args = vec!["/model.bin".to_string()];
+        let file_name = file_path.file_name().unwrap().to_str().unwrap();
+
+        let mut args = vec![format!("/{}", &file_name)];
         if let Some(filter) = filter {
             args.push(format!("--filter={filter}"));
         }
@@ -70,11 +73,18 @@ impl Inspector {
             args.push("--detailed".to_string());
         }
 
-        let (stdout, stderr) = super::run(
-            &self.image_id,
-            args,
-            vec![(file_path.display().to_string(), "/model.bin".to_string())],
-        )?;
+        let mut volumes = vec![(file_path.display().to_string(), format!("/{}", &file_name))];
+        for additional_file in additional_files {
+            let add_file_path = file_path.parent().unwrap().join(&additional_file);
+            if add_file_path.exists() {
+                volumes.push((
+                    add_file_path.display().to_string(),
+                    format!("/{}", &additional_file),
+                ));
+            }
+        }
+
+        let (stdout, stderr) = super::run(&self.image_id, args, volumes)?;
 
         if !stderr.is_empty() {
             anyhow::bail!("docker container error: {}", stderr);

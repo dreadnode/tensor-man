@@ -36,5 +36,5 @@ pub(crate) fn inspect(
         include_str!("inspect.py"),
         include_str!("inspect.requirements"),
     )
-    .run(file_path, detail, filter)
+    .run(file_path, vec![], detail, filter)
 }
