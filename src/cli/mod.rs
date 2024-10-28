@@ -62,10 +62,10 @@ pub(crate) struct InspectArgs {
 #[derive(Debug, Args)]
 pub(crate) struct CreateKeyArgs {
     /// Output path for private key file.
-    #[clap(long, short = 'O', default_value = "./private.key")]
+    #[clap(long, default_value = "./private.key")]
     private_key: PathBuf,
     /// Output path for public key file.
-    #[clap(long, short = 'P', default_value = "./public.key")]
+    #[clap(long, default_value = "./public.key")]
     public_key: PathBuf,
 }
 
