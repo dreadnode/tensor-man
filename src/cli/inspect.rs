@@ -14,22 +14,18 @@ pub(crate) fn inspect(args: InspectArgs) -> anyhow::Result<()> {
     );
 
     let forced_format = args.format.unwrap_or(FileType::Unknown);
-    let file_ext = args
-        .file_path
-        .extension()
-        .unwrap_or_default()
-        .to_str()
-        .unwrap_or("")
-        .to_ascii_lowercase();
-
-    let inspection = if forced_format.is_safetensors() || file_ext == "safetensors" {
+    let inspection = if forced_format.is_safetensors()
+        || crate::core::safetensors::is_safetensors(&args.file_path)
+    {
         crate::core::safetensors::inspect(args.file_path, args.detail, args.filter)?
-    } else if forced_format.is_onnx() || file_ext == "onnx" {
+    } else if forced_format.is_onnx() || crate::core::onnx::is_onnx(&args.file_path) {
         crate::core::onnx::inspect(args.file_path, args.detail, args.filter)?
-    } else if forced_format.is_gguf() || file_ext == "gguf" {
+    } else if forced_format.is_gguf() || crate::core::gguf::is_gguf(&args.file_path) {
         crate::core::gguf::inspect(args.file_path, args.detail, args.filter)?
+    } else if forced_format.is_pytorch() || crate::core::pytorch::is_pytorch(&args.file_path) {
+        crate::core::pytorch::inspect(args.file_path, args.detail, args.filter)?
     } else {
-        anyhow::bail!("unsupported file extension: {:?}", file_ext)
+        anyhow::bail!("unsupported file format")
     };
 
     println!("file type:     {}", inspection.file_type);

@@ -17,6 +17,16 @@ struct TensorIndex {
     weight_map: HashMap<String, String>,
 }
 
+pub(crate) fn is_safetensors(file_path: &Path) -> bool {
+    file_path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("")
+        .to_ascii_lowercase()
+        == "safetensors"
+}
+
 pub(crate) fn is_safetensors_index(file_path: &Path) -> bool {
     file_path
         .file_name()

@@ -1,4 +1,7 @@
-use std::{collections::HashSet, path::PathBuf};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
 use protobuf::Message;
 use protos::{tensor_proto::DataLocation, ModelProto};
@@ -11,6 +14,16 @@ use super::{
     protos::{self, TensorProto},
     FileType, Inspection, TensorDescriptor,
 };
+
+pub(crate) fn is_onnx(file_path: &Path) -> bool {
+    file_path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("")
+        .to_ascii_lowercase()
+        == "onnx"
+}
 
 pub(crate) fn paths_to_sign(file_path: &PathBuf) -> anyhow::Result<Vec<PathBuf>> {
     let base_path = file_path

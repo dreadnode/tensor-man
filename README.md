@@ -1,4 +1,14 @@
-`tensor-man` is an utility to inspect and validate [safetensors](https://github.com/huggingface/safetensors), [ONNX](https://onnx.ai/) and [GGUF](https://huggingface.co/docs/hub/gguf) files.
+`tensor-man` is an utility to inspect, validate, sign and verify machine learning model files.
+
+## Supported Formats
+
+* [safetensors](https://github.com/huggingface/safetensors)
+* [ONNX](https://onnx.ai/)
+* [GGUF](https://huggingface.co/docs/hub/gguf)
+* [PyTorch](https://pytorch.org/)
+
+> [!IMPORTANT]
+> Formats such as PyTorch are loaded and inspected in a networkless container in order to prevent unintended code execution on the host machine.
 
 ## Install with Cargo
 

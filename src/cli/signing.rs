@@ -72,26 +72,21 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
     let ref_manifest: Manifest = serde_json::from_str(&raw)?;
 
     let forced_format = args.format.unwrap_or(FileType::Unknown);
-    let file_ext = args
-        .file_path
-        .extension()
-        .unwrap_or_default()
-        .to_str()
-        .unwrap_or("")
-        .to_ascii_lowercase();
 
     let raw = std::fs::read(&args.key_path)?;
     let mut manifest = Manifest::for_verifying(raw);
 
     let mut paths_to_verify = if forced_format.is_safetensors()
-        || file_ext == "safetensors"
+        || crate::core::safetensors::is_safetensors(&args.file_path)
         || is_safetensors_index(&args.file_path)
     {
         crate::core::safetensors::paths_to_sign(&args.file_path)?
-    } else if forced_format.is_onnx() || file_ext == "onnx" {
+    } else if forced_format.is_onnx() || crate::core::onnx::is_onnx(&args.file_path) {
         crate::core::onnx::paths_to_sign(&args.file_path)?
-    } else if forced_format.is_gguf() || file_ext == "gguf" {
+    } else if forced_format.is_gguf() || crate::core::gguf::is_gguf(&args.file_path) {
         crate::core::gguf::paths_to_sign(&args.file_path)?
+    } else if forced_format.is_pytorch() || crate::core::pytorch::is_pytorch(&args.file_path) {
+        crate::core::pytorch::paths_to_sign(&args.file_path)?
     } else {
         println!("Warning: Unrecognized file format. Verifying this file does not ensure that the model data will be verified in its entirety.");
         vec![args.file_path.clone()]

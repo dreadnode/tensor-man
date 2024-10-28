@@ -1,4 +1,7 @@
-use std::{collections::HashSet, path::PathBuf};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
 use gguf::GGUFTensorInfo;
 use rayon::prelude::*;
@@ -9,6 +12,16 @@ use crate::{
 };
 
 use super::data_type_bits;
+
+pub(crate) fn is_gguf(file_path: &Path) -> bool {
+    file_path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or("")
+        .to_ascii_lowercase()
+        == "gguf"
+}
 
 fn build_tensor_descriptor(t_info: &GGUFTensorInfo) -> TensorDescriptor {
     TensorDescriptor {

@@ -1,17 +1,19 @@
 use std::{collections::BTreeMap, fmt, path::PathBuf};
 
 use clap::ValueEnum;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub(crate) mod gguf;
 pub(crate) mod onnx;
+pub(crate) mod pytorch;
 pub(crate) mod safetensors;
 
+pub(crate) mod docker;
 pub(crate) mod signing;
 
 pub(crate) type Metadata = BTreeMap<String, String>;
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub(crate) struct TensorDescriptor {
     pub id: Option<String>,
     pub shape: Vec<usize>,
@@ -21,13 +23,14 @@ pub(crate) struct TensorDescriptor {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Clone, Default, Serialize, ValueEnum)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, ValueEnum)]
 pub(crate) enum FileType {
     #[default]
     Unknown,
     SafeTensors,
     ONNX,
     GGUF,
+    PyTorch,
 }
 
 #[allow(dead_code)]
@@ -47,6 +50,10 @@ impl FileType {
     pub fn is_gguf(&self) -> bool {
         matches!(self, FileType::GGUF)
     }
+
+    pub fn is_pytorch(&self) -> bool {
+        matches!(self, FileType::PyTorch)
+    }
 }
 
 impl fmt::Display for FileType {
@@ -56,13 +63,14 @@ impl fmt::Display for FileType {
             FileType::SafeTensors => write!(f, "SafeTensors"),
             FileType::ONNX => write!(f, "ONNX"),
             FileType::GGUF => write!(f, "GGUF"),
+            FileType::PyTorch => write!(f, "PyTorch"),
         }
     }
 }
 
 pub(crate) type Shape = Vec<usize>;
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Inspection {
     pub file_path: PathBuf,
     pub file_type: FileType,
