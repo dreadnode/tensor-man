@@ -8,7 +8,7 @@
 * [PyTorch](https://pytorch.org/)
 
 > [!IMPORTANT]
-> Formats such as PyTorch are loaded and inspected in a networkless Docker container in order to prevent unintended code execution on the host machine.
+> PyTorch models are loaded and inspected in a networkless Docker container in order to prevent [unintended code execution](https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models) on the host machine.
 
 ## Install with Cargo
 
