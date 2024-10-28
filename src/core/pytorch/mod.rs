@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::cli::DetailLevel;
 
-use super::{docker::DockerizedInspection, Inspection};
+use super::{docker, Inspection};
 
 pub(crate) fn is_pytorch(file_path: &Path) -> bool {
     file_path
@@ -31,7 +31,7 @@ pub(crate) fn inspect(
     detail: DetailLevel,
     filter: Option<String>,
 ) -> anyhow::Result<Inspection> {
-    DockerizedInspection::new(
+    docker::Inspector::new(
         include_str!("inspect.Dockerfile"),
         include_str!("inspect.py"),
         include_str!("inspect.requirements"),
