@@ -15,9 +15,13 @@ args = parser.parse_args()
 file_path = os.path.abspath(args.file)
 file_size = os.path.getsize(file_path)
 
-model = torch.load(
-    file_path, weights_only=True, mmap=True, map_location=torch.device("cpu")
-)
+try:
+    model = torch.load(
+        file_path, weights_only=True, mmap=True, map_location=torch.device("cpu")
+    )
+except RuntimeError:
+    # RuntimeError: mmap can only be used with files saved with `torch.save(/model.bin, _use_new_zipfile_serialization=True), please torch.save your checkpoint with this option in order to use mmap.
+    model = torch.load(file_path, weights_only=True, map_location=torch.device("cpu"))
 
 all_metadata = getattr(model, "_metadata") if hasattr(model, "_metadata") else {}
 model_metadata = all_metadata[""] if "" in all_metadata else {}
@@ -64,6 +68,11 @@ for tensor_name, tensor in model.items():
             }
         )
 
-inspection["header_size"] = inspection["file_size"] - inspection["data_size"]
+# data can be compressed or shared among multiple vectors(?) in which case this would be negative
+inspection["header_size"] = (
+    inspection["file_size"] - inspection["data_size"]
+    if inspection["data_size"] < inspection["file_size"]
+    else 0
+)
 
 print(json.dumps(inspection))
