@@ -56,7 +56,7 @@ fn get_paths_of_interest(
     };
 
     if paths.is_empty() {
-        return Err(anyhow!("No files to sign"));
+        return Err(anyhow!("no compatible paths found"));
     }
 
     Ok(paths)
