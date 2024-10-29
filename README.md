@@ -100,6 +100,9 @@ tman sign /path/to/whatever/tinyyolov2-8.onnx -K /path/to/private.key
 
 # you can provide a safetensors index file and all files referenced by it will be signed as well
 tman sign /path/to/whatever/Meta-Llama-3-8B/model.safetensors.index.json -K /path/to/private.key
+
+# this will sign every supported file in the model folder
+tman sign /path/to/whatever/Meta-Llama-3-8B/ -K /path/to/private.key
 ```
 And the public one to verify the signature:
 
@@ -109,6 +112,9 @@ tman verify /path/to/whatever/tinyyolov2-8.onnx -K /path/to/public.key
 
 # will verify with an alternative signature file 
 tman verify /path/to/whatever/tinyyolov2-8.onnx -K /path/to/public.key --signature /path/to/your.signature
+
+# this will verify every supported file in the model folder
+tman sign /path/to/whatever/Meta-Llama-3-8B/ -K /path/to/public.key
 ```
 
 ### Inference Graph
