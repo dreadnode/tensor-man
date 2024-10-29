@@ -1,3 +1,16 @@
+
+<p align="center">
+  <a href="https://github.com/dreadnode/tensor-man/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/dreadnode/tensor-man.svg?style=fl_pathat-square"></a>
+  <a href="https://crates.io/crates/tensor-man"><img alt="Crate" src="https://img.shields.io/crates/v/tensor-man.svg"></a>
+  <!-- soon :)
+  <a href="https://hub.docker.com/r/dreadnode/tensor-man"><img alt="Docker Hub" src="https://img.shields.io/docker/v/dreadnode/tensor-man?logo=docker"></a>
+  -->
+  <a href="https://rust-reportcard.xuri.me/report/github.com/dreadnode/tensor-man"><img alt="Rust Report" src="https://rust-reportcard.xuri.me/
+  badge/github.com/dreadnode/tensor-man"></a>
+  <a href="#"><img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/dreadnode/tensor-man/test.yml"></a>
+  <a href="https://github.com/dreadnode/tensor-man/blob/master/LICENSE.md"><img alt="Software License" src="https://img.shields.io/badge/license-GPL3-brightgreen.svg?style=flat-square"></a>
+</p>
+
 `tensor-man` is a utility to inspect, validate, sign and verify machine learning model files.
 
 ## Supported Formats
