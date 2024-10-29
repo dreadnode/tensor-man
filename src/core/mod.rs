@@ -3,12 +3,8 @@ use std::{collections::BTreeMap, fmt, path::PathBuf};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-pub(crate) mod gguf;
-pub(crate) mod onnx;
-pub(crate) mod pytorch;
-pub(crate) mod safetensors;
-
 pub(crate) mod docker;
+pub(crate) mod handlers;
 pub(crate) mod signing;
 
 pub(crate) type Metadata = BTreeMap<String, String>;

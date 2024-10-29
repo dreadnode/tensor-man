@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use blake2::{Blake2b512, Digest};
 
@@ -50,7 +50,7 @@ impl Inspector {
 
     pub fn run(
         &self,
-        file_path: PathBuf,
+        file_path: &Path,
         additional_files: Vec<String>,
         detail: DetailLevel,
         filter: Option<String>,

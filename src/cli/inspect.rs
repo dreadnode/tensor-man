@@ -1,12 +1,16 @@
-use crate::core::FileType;
+use crate::core::handlers::Scope;
 
 use super::InspectArgs;
 
 pub(crate) fn inspect(args: InspectArgs) -> anyhow::Result<()> {
+    let handler =
+        crate::core::handlers::handler_for(args.format, &args.file_path, Scope::Inspection)?;
+
     if !args.quiet {
         println!(
-            "Inspecting {:?} (detail={:?}{}):\n",
+            "Inspecting {:?} (format={}, detail={:?}{}):\n",
             args.file_path,
+            handler.file_type(),
             args.detail,
             args.filter
                 .as_ref()
@@ -15,20 +19,7 @@ pub(crate) fn inspect(args: InspectArgs) -> anyhow::Result<()> {
         );
     }
 
-    let forced_format = args.format.unwrap_or(FileType::Unknown);
-    let inspection = if forced_format.is_safetensors()
-        || crate::core::safetensors::is_safetensors(&args.file_path)
-    {
-        crate::core::safetensors::inspect(args.file_path, args.detail, args.filter)?
-    } else if forced_format.is_onnx() || crate::core::onnx::is_onnx(&args.file_path) {
-        crate::core::onnx::inspect(args.file_path, args.detail, args.filter)?
-    } else if forced_format.is_gguf() || crate::core::gguf::is_gguf(&args.file_path) {
-        crate::core::gguf::inspect(args.file_path, args.detail, args.filter)?
-    } else if forced_format.is_pytorch() || crate::core::pytorch::is_pytorch(&args.file_path) {
-        crate::core::pytorch::inspect(args.file_path, args.detail, args.filter)?
-    } else {
-        anyhow::bail!("unsupported file format")
-    };
+    let inspection = handler.inspect(&args.file_path, args.detail, args.filter)?;
 
     if !args.quiet {
         println!("file type:     {}", inspection.file_type);
