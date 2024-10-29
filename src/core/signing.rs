@@ -84,7 +84,11 @@ pub(crate) struct Manifest {
 }
 
 impl Manifest {
-    pub(crate) fn for_signing(signing_key: signature::Ed25519KeyPair) -> Self {
+    pub(crate) fn from_signature_path(path: &Path) -> anyhow::Result<Self> {
+        Ok(serde_json::from_str(&std::fs::read_to_string(path)?)?)
+    }
+
+    pub(crate) fn from_signing_key(signing_key: signature::Ed25519KeyPair) -> Self {
         let public_key = signing_key.public_key();
         let mut hasher = Blake2b512::new();
         hasher.update(public_key.as_ref());
@@ -107,13 +111,13 @@ impl Manifest {
         }
     }
 
-    pub(crate) fn for_verifying(public_key_bytes: Vec<u8>) -> Self {
+    pub(crate) fn from_public_key(public_key_bytes: Vec<u8>) -> anyhow::Result<Self> {
         let public_key = UnparsedPublicKey::new(&ED25519, public_key_bytes);
         let mut hasher = Blake2b512::new();
         hasher.update(public_key.as_ref());
         let hash = hasher.finalize();
 
-        Self {
+        Ok(Self {
             version: Version::V1,
             signed_at: chrono::Utc::now().to_rfc3339(),
             signed_with: format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
@@ -127,10 +131,15 @@ impl Manifest {
             signature: String::new(),
             signing_key: None,
             verifying_key: Some(public_key),
-        }
+        })
     }
 
-    pub(crate) fn compute_checksum(&mut self, path: &Path) -> anyhow::Result<()> {
+    pub(crate) fn from_public_key_path(public_key: &Path) -> anyhow::Result<Self> {
+        let public_key_bytes = std::fs::read(public_key)?;
+        Self::from_public_key(public_key_bytes)
+    }
+
+    fn compute_checksum(&mut self, path: &Path) -> anyhow::Result<()> {
         // print!("  computing checksum for {} ...", path.to_string_lossy());
         // std::io::stdout().flush().unwrap();
 
@@ -168,7 +177,7 @@ impl Manifest {
         checksums.join(".")
     }
 
-    pub(crate) fn create_signature(&mut self) -> anyhow::Result<&str> {
+    fn create_signature(&mut self) -> anyhow::Result<&str> {
         let data_to_sign = self.data_to_sign();
         // sign data
         self.signature = hex::encode(
@@ -211,15 +220,38 @@ impl Manifest {
             .map_err(|e| anyhow::anyhow!("signature verification failed: {}", e))
     }
 
-    pub(crate) fn verify(&self, ref_manifest: &Self) -> anyhow::Result<()> {
+    pub(crate) fn sign(&mut self, paths: &mut [PathBuf]) -> anyhow::Result<&str> {
+        paths.sort();
+
+        // compute checksums for all files
+        for path in paths {
+            println!("Signing {} ...", path.display());
+
+            self.compute_checksum(path)?;
+        }
+
+        // sign
+        self.create_signature()
+    }
+
+    pub(crate) fn verify(&mut self, paths: &mut [PathBuf], signature: &Self) -> anyhow::Result<()> {
+        paths.sort();
+
+        // compute checksums for all files
+        for path in paths {
+            println!("Hashing {} ...", path.display());
+
+            self.compute_checksum(path)?;
+        }
+
         // check public key fingerprint if set
-        if ref_manifest.public_key != self.public_key {
+        if signature.public_key != self.public_key {
             anyhow::bail!("public key fingerprint mismatch");
         }
         // verify individual checksums
-        self.verify_checksums(&ref_manifest.checksums)?;
+        self.verify_checksums(&signature.checksums)?;
         // verify signature
-        self.verify_signature(&ref_manifest.signature)
+        self.verify_signature(&signature.signature)
     }
 }
 
@@ -246,7 +278,7 @@ mod tests {
     #[test]
     fn test_will_create_a_signature() {
         let keypair = create_test_keypair();
-        let mut manifest = Manifest::for_signing(keypair);
+        let mut manifest = Manifest::from_signing_key(keypair);
 
         let temp_file = create_temp_file_with_content("test").unwrap();
 
@@ -277,18 +309,17 @@ mod tests {
         let keypair = create_test_keypair();
         let pub_key = keypair.public_key().as_ref().to_vec();
 
-        let mut ref_manifest = Manifest::for_signing(keypair);
+        let mut ref_manifest = Manifest::from_signing_key(keypair);
 
         let temp_file = create_temp_file_with_content("test").unwrap();
 
-        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
-        ref_manifest.create_signature().unwrap();
+        let mut paths = vec![temp_file.path().to_path_buf()];
 
-        let mut manifest = Manifest::for_verifying(pub_key);
+        _ = ref_manifest.sign(&mut paths).unwrap();
 
-        manifest.compute_checksum(&temp_file.path()).unwrap();
+        let mut manifest = Manifest::from_public_key(pub_key).unwrap();
 
-        manifest.verify(&ref_manifest).unwrap();
+        manifest.verify(&mut paths, &ref_manifest).unwrap();
     }
 
     #[test]
@@ -297,18 +328,19 @@ mod tests {
         let other_keypair = create_test_keypair();
         let pub_key = other_keypair.public_key().as_ref().to_vec();
 
-        let mut ref_manifest = Manifest::for_signing(keypair);
+        let mut ref_manifest = Manifest::from_signing_key(keypair);
 
         let temp_file = create_temp_file_with_content("test").unwrap();
+        let mut paths = vec![temp_file.path().to_path_buf()];
 
         ref_manifest.compute_checksum(&temp_file.path()).unwrap();
         ref_manifest.create_signature().unwrap();
 
-        let mut manifest = Manifest::for_verifying(pub_key);
+        let mut manifest = Manifest::from_public_key(pub_key).unwrap();
 
         manifest.compute_checksum(&temp_file.path()).unwrap();
 
-        assert!(manifest.verify(&ref_manifest).is_err());
+        assert!(manifest.verify(&mut paths, &ref_manifest).is_err());
     }
 
     #[test]
@@ -316,20 +348,21 @@ mod tests {
         let keypair = create_test_keypair();
         let pub_key = keypair.public_key().as_ref().to_vec();
 
-        let mut ref_manifest = Manifest::for_signing(keypair);
+        let mut ref_manifest = Manifest::from_signing_key(keypair);
 
         let temp_file = create_temp_file_with_content("test").unwrap();
+        let mut paths = vec![temp_file.path().to_path_buf()];
 
         ref_manifest.compute_checksum(&temp_file.path()).unwrap();
         ref_manifest.create_signature().unwrap();
 
-        let mut manifest = Manifest::for_verifying(pub_key);
+        let mut manifest = Manifest::from_public_key(pub_key).unwrap();
 
         let temp_file = create_temp_file_with_content("tost").unwrap();
 
         manifest.compute_checksum(&temp_file.path()).unwrap();
 
-        assert!(manifest.verify(&ref_manifest).is_err());
+        assert!(manifest.verify(&mut paths, &ref_manifest).is_err());
     }
 
     #[test]
@@ -337,36 +370,20 @@ mod tests {
         let keypair = create_test_keypair();
         let pub_key = keypair.public_key().as_ref().to_vec();
 
-        let mut ref_manifest = Manifest::for_signing(keypair);
+        let mut ref_manifest = Manifest::from_signing_key(keypair);
 
         let temp_file = create_temp_file_with_content("test").unwrap();
+        let mut paths = vec![temp_file.path().to_path_buf()];
+
         ref_manifest.compute_checksum(&temp_file.path()).unwrap();
         ref_manifest.create_signature().unwrap();
 
-        let mut manifest = Manifest::for_verifying(pub_key);
+        let mut manifest = Manifest::from_public_key(pub_key).unwrap();
 
         let empty_file = create_temp_file_with_content("").unwrap();
         manifest.compute_checksum(&empty_file.path()).unwrap();
 
-        assert!(manifest.verify(&ref_manifest).is_err());
-    }
-
-    #[test]
-    fn test_wont_verify_missing_file() {
-        let keypair = create_test_keypair();
-        let pub_key = keypair.public_key().as_ref().to_vec();
-
-        let mut ref_manifest = Manifest::for_signing(keypair);
-
-        let temp_file = create_temp_file_with_content("test").unwrap();
-        ref_manifest.compute_checksum(&temp_file.path()).unwrap();
-        ref_manifest.create_signature().unwrap();
-
-        let manifest = Manifest::for_verifying(pub_key);
-
-        // Don't compute any checksum, leaving manifest.checksums empty
-
-        assert!(manifest.verify(&ref_manifest).is_err());
+        assert!(manifest.verify(&mut paths, &ref_manifest).is_err());
     }
 
     #[test]
@@ -374,13 +391,15 @@ mod tests {
         let keypair = create_test_keypair();
         let pub_key = keypair.public_key().as_ref().to_vec();
 
-        let mut ref_manifest = Manifest::for_signing(keypair);
+        let mut ref_manifest = Manifest::from_signing_key(keypair);
 
         let temp_file = create_temp_file_with_content("test").unwrap();
+        let mut paths = vec![temp_file.path().to_path_buf()];
+
         ref_manifest.compute_checksum(&temp_file.path()).unwrap();
         ref_manifest.create_signature().unwrap();
 
-        let mut manifest = Manifest::for_verifying(pub_key);
+        let mut manifest = Manifest::from_public_key(pub_key).unwrap();
 
         // Compute checksum for original file
         manifest.compute_checksum(&temp_file.path()).unwrap();
@@ -389,7 +408,7 @@ mod tests {
         let extra_file = create_temp_file_with_content("extra").unwrap();
         manifest.compute_checksum(&extra_file.path()).unwrap();
 
-        assert!(manifest.verify(&ref_manifest).is_err());
+        assert!(manifest.verify(&mut paths, &ref_manifest).is_err());
     }
 
     #[test]
@@ -397,15 +416,17 @@ mod tests {
         let keypair = create_test_keypair();
         let pub_key = keypair.public_key().as_ref().to_vec();
 
-        let mut ref_manifest = Manifest::for_signing(keypair);
+        let mut ref_manifest = Manifest::from_signing_key(keypair);
 
         let temp_file = create_temp_file_with_content("test").unwrap();
         ref_manifest.compute_checksum(&temp_file.path()).unwrap();
         // Deliberately skip creating signature
 
-        let mut manifest = Manifest::for_verifying(pub_key);
+        let mut manifest = Manifest::from_public_key(pub_key).unwrap();
         manifest.compute_checksum(&temp_file.path()).unwrap();
 
-        assert!(manifest.verify(&ref_manifest).is_err());
+        let mut paths = vec![temp_file.path().to_path_buf()];
+
+        assert!(manifest.verify(&mut paths, &ref_manifest).is_err());
     }
 }

@@ -7,28 +7,21 @@ pub(crate) fn create_key(args: CreateKeyArgs) -> anyhow::Result<()> {
 }
 
 pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
-    let signing_key = crate::core::signing::load_key(&args.key_path)?;
+    // determine handler
     let handler = crate::core::handlers::handler_for(args.format, &args.file_path, Scope::Signing);
+    // load the private key for signing
+    let signing_key = crate::core::signing::load_key(&args.key_path)?;
+    // get the paths to sign
     let mut paths_to_sign = if let Ok(handler) = handler {
         handler.paths_to_sign(&args.file_path)?
     } else {
         println!("Warning: Unrecognized file format. Signing this file does not ensure that the model data will be signed in its entirety.");
         vec![args.file_path.clone()]
     };
-
-    paths_to_sign.sort();
-
-    let mut manifest = Manifest::for_signing(signing_key);
-
-    // compute checksums for all files
-    for path in paths_to_sign {
-        println!("Signing {} ...", path.display());
-
-        manifest.compute_checksum(&path)?;
-    }
-
+    // create the manifest
+    let mut manifest = Manifest::from_signing_key(signing_key);
     // sign
-    let signature = manifest.create_signature()?;
+    let signature = manifest.sign(&mut paths_to_sign)?;
     println!("Signature: {}", signature);
 
     // write manifest to file
@@ -46,37 +39,25 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
 }
 
 pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
-    let manifest_path = if let Some(path) = args.signature {
+    // determine handler
+    let handler = crate::core::handlers::handler_for(args.format, &args.file_path, Scope::Signing);
+    // load signature file to verify
+    let signature = Manifest::from_signature_path(&if let Some(path) = args.signature {
         path
     } else {
         args.file_path.with_extension("signature")
-    };
-
-    let raw = std::fs::read_to_string(&manifest_path)?;
-    let ref_manifest: Manifest = serde_json::from_str(&raw)?;
-
-    let raw = std::fs::read(&args.key_path)?;
-    let mut manifest = Manifest::for_verifying(raw);
-
-    let handler = crate::core::handlers::handler_for(args.format, &args.file_path, Scope::Signing);
+    })?;
+    // load the public key to verify against
+    let mut manifest = Manifest::from_public_key_path(&args.key_path)?;
+    // get the paths to verify
     let mut paths_to_verify = if let Ok(handler) = handler {
         handler.paths_to_sign(&args.file_path)?
     } else {
         println!("Warning: Unrecognized file format. Signing this file does not ensure that the model data will be signed in its entirety.");
         vec![args.file_path.clone()]
     };
-
-    paths_to_verify.sort();
-
-    // compute checksums for all files
-    for path in paths_to_verify {
-        println!("Hashing {} ...", path.display());
-
-        manifest.compute_checksum(&path)?;
-    }
-
-    // verify
-    manifest.verify(&ref_manifest)?;
+    // this will compute the checksums and verify the signature
+    manifest.verify(&mut paths_to_verify, &signature)?;
 
     println!("Signature verified");
 
