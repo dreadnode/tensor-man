@@ -31,6 +31,8 @@ pub(crate) enum Command {
     Verify(VerifyArgs),
     /// Generate a DOT representation of the graph of the model.
     Graph(GraphArgs),
+    /// Print version and exit.
+    Version,
 }
 
 #[derive(Debug, Clone, ValueEnum)]

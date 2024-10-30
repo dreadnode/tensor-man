@@ -13,6 +13,10 @@ fn main() {
         Command::Sign(args) => cli::sign(args),
         Command::Verify(args) => cli::verify(args),
         Command::Graph(args) => cli::graph(args),
+        Command::Version => {
+            println!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
     };
 
     if let Err(e) = ret {
