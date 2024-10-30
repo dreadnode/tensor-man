@@ -28,7 +28,7 @@ fn run_command(command: &str, args: &[&str]) -> anyhow::Result<(String, String)>
     }
 }
 
-fn docker_exists() -> bool {
+pub(crate) fn docker_exists() -> bool {
     run_command("docker", &["version"]).is_ok()
 }
 

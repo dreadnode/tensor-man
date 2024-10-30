@@ -53,6 +53,12 @@ impl Handler for PyTorchHandler {
         detail: DetailLevel,
         filter: Option<String>,
     ) -> anyhow::Result<Inspection> {
+        if !docker::docker_exists() {
+            return Err(anyhow::anyhow!(
+                "docker is required to inspect pytorch models, make sure the docker binary is in $PATH and that /var/run/docker.sock is shared from the host if you are running tensor-man itself inside a container."
+            ));
+        }
+
         docker::Inspector::new(
             include_str!("inspect.Dockerfile"),
             include_str!("inspect.py"),

@@ -16,7 +16,7 @@ fn main() {
     };
 
     if let Err(e) = ret {
-        eprintln!("error: {}", e);
+        eprintln!("Error: {}", e);
         std::process::exit(1);
     }
 }
