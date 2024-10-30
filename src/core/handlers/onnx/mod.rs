@@ -127,6 +127,14 @@ fn in_range(low: char, c: char, high: char) -> bool {
 
 fn str_to_node_name(s: &str) -> String {
     let mut result = String::new();
+
+    // make sure the name starts with a letter or underscore or dot
+    if let Some(first) = s.chars().next() {
+        if !is_letter_or_underscore_or_dot(first) {
+            result.push('_');
+        }
+    }
+
     for c in s.chars() {
         if is_constituent(c) {
             result.push(c);
