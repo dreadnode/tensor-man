@@ -75,10 +75,15 @@ fn signature_path(file_path: &Path, signature_path: Option<PathBuf>) -> PathBuf 
 pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
     // load the private key for signing
     let signing_key = crate::core::signing::load_key(&args.key_path)?;
-    // create the manifest
-    let mut manifest = Manifest::from_signing_key(signing_key);
     // get the paths to sign
     let mut paths_to_sign = get_paths_of_interest(args.format, &args.file_path)?;
+    let base_path = if args.file_path.is_file() {
+        args.file_path.parent().unwrap().to_path_buf()
+    } else {
+        args.file_path.to_path_buf()
+    };
+    // create the manifest
+    let mut manifest = Manifest::from_signing_key(&base_path, signing_key)?;
 
     // sign
     let signature = manifest.sign(&mut paths_to_sign)?;
@@ -95,15 +100,21 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
 }
 
 pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
+    let base_path = if args.file_path.is_file() {
+        args.file_path.parent().unwrap().to_path_buf()
+    } else {
+        args.file_path.to_path_buf()
+    };
+
     // load signature file to verify
     let signature_path = signature_path(&args.file_path, args.signature);
 
     println!("Verifying signature: {}", signature_path.display());
 
-    let signature = Manifest::from_signature_path(&signature_path)?;
+    let signature = Manifest::from_signature_path(&base_path, &signature_path)?;
 
     // load the public key to verify against
-    let mut manifest = Manifest::from_public_key_path(&args.key_path)?;
+    let mut manifest = Manifest::from_public_key_path(&base_path, &args.key_path)?;
     // get the paths to verify
     let mut paths_to_verify = get_paths_of_interest(args.format, &args.file_path)?;
 
