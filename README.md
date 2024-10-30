@@ -22,6 +22,8 @@
 
 ## Install with Cargo
 
+This is the recommended way to install and use the tool:
+
 ```bash
 cargo install tensor-man
 ```
@@ -38,6 +40,20 @@ To build your own Docker image for the tool, run:
 
 ```bash
 docker build . -t tman  
+```
+
+## Note about Docker
+
+If you want to inspect PyTorch models and you are using `tensor-man` inside a container, make sure to share the docker socket from the host machine with the container:
+
+```bash
+docker run -it \
+  # these paths must match
+  -v/path/to/pytorch_model.bin:/path/to/pytorch_model.bin \
+  # allow the container itself to instrument docker on the host
+  -v/var/run/docker.sock:/var/run/docker.sock \
+  # the rest of the command line
+  tman inspect /path/to/pytorch_model.bin
 ```
 
 ## Build from source
