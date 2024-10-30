@@ -1,9 +1,10 @@
 name: Build and Push Docker Images
 
 on:
-  push:
-    tags:
-      - '*'
+    push:
+      branches: [ "main" ]
+      paths-ignore:
+        - 'README.md'
 
 jobs:
   docker:
