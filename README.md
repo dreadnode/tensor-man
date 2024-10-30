@@ -26,9 +26,15 @@
 cargo install tensor-man
 ```
 
+## Pull from Docker Hub
+
+```bash
+docker pull dreadnode/tensor-man:latest
+```
+
 ## Build Docker image
 
-To build the Docker image for the tool, run:
+To build your own Docker image for the tool, run:
 
 ```bash
 docker build . -t tman  
