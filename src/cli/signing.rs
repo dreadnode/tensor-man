@@ -19,9 +19,14 @@ fn get_paths_for(format: Option<FileType>, file_path: &Path) -> anyhow::Result<V
     let handler = crate::core::handlers::handler_for(format, file_path, Scope::Signing);
     // get the paths to sign or verify
     if let Ok(handler) = handler {
-        handler.paths_to_sign(file_path)
+        handler.paths_to_sign(file_path).map(|paths| {
+            paths
+                .iter()
+                .map(|path| path.canonicalize().unwrap())
+                .collect()
+        })
     } else {
-        Ok(vec![file_path.to_path_buf()])
+        Ok(vec![file_path.canonicalize()?.to_path_buf()])
     }
 }
 
@@ -59,9 +64,12 @@ fn get_paths_of_interest(
 
 fn signature_path(file_path: &Path, signature_path: Option<PathBuf>) -> PathBuf {
     if let Some(path) = signature_path {
-        path
+        path.canonicalize().unwrap()
     } else if file_path.is_file() {
-        file_path.with_extension("signature")
+        file_path
+            .with_extension("signature")
+            .canonicalize()
+            .unwrap()
     } else {
         file_path.join("tensor-man.signature")
     }
@@ -112,6 +120,8 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
     let mut manifest = Manifest::from_public_key_path(&base_path, &args.key_path)?;
     // get the paths to verify
     let mut paths_to_verify = get_paths_of_interest(args.format, &args.file_path)?;
+    // remove the signature file from the list
+    paths_to_verify.retain(|p| p != &signature_path);
 
     // this will compute the checksums and verify the signature
     manifest.verify(&mut paths_to_verify, &signature)?;
@@ -131,11 +141,12 @@ mod tests {
     fn test_get_paths_single_file() -> anyhow::Result<()> {
         let temp_dir = TempDir::new()?;
         let file_path = temp_dir.path().join("model.safetensors");
+
         File::create(&file_path)?;
 
         let paths = get_paths_of_interest(None, &file_path)?;
         assert_eq!(paths.len(), 1);
-        assert_eq!(paths[0], file_path);
+        assert_eq!(paths[0], file_path.canonicalize()?);
 
         Ok(())
     }
@@ -255,6 +266,35 @@ mod tests {
                 "regular.txt"
             ]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_paths_are_canonicalized() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let file_path = temp_dir.path().join("test.txt");
+        File::create(&file_path)?;
+
+        // Get paths using absolute path first to verify it works
+        let paths = get_paths_of_interest(None, &file_path)?;
+        assert_eq!(paths.len(), 1);
+        let canonical_path = file_path.canonicalize()?;
+        assert_eq!(&paths[0], &canonical_path);
+
+        // Change into temp dir to test relative path
+        std::env::set_current_dir(temp_dir.path())?;
+
+        // Get paths using relative path
+        let relative_path = PathBuf::from("test.txt");
+        let paths = get_paths_of_interest(None, &relative_path)?;
+
+        assert_eq!(paths.len(), 1);
+        let returned_path = &paths[0];
+
+        // Verify the returned path is absolute and canonicalized
+        assert!(returned_path.is_absolute());
+        assert_eq!(returned_path, &canonical_path);
 
         Ok(())
     }
