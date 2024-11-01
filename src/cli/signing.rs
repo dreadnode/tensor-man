@@ -14,38 +14,33 @@ pub(crate) fn create_key(args: CreateKeyArgs) -> anyhow::Result<()> {
     crate::core::signing::create_key(&args.private_key, &args.public_key)
 }
 
+fn get_paths_for(format: Option<FileType>, file_path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+    // determine handler
+    let handler = crate::core::handlers::handler_for(format, file_path, Scope::Signing);
+    // get the paths to sign or verify
+    if let Ok(handler) = handler {
+        handler.paths_to_sign(file_path)
+    } else {
+        Ok(vec![file_path.to_path_buf()])
+    }
+}
+
 fn get_paths_of_interest(
     format: Option<FileType>,
     file_path: &Path,
 ) -> anyhow::Result<Vec<PathBuf>> {
     let paths = if file_path.is_file() {
         // single file case
-        // determine handler
-        let handler = crate::core::handlers::handler_for(format, file_path, Scope::Signing);
-        // get the paths to sign or verify
-        if let Ok(handler) = handler {
-            handler.paths_to_sign(file_path)?
-        } else {
-            println!("Warning: Unrecognized file format. Signing this file does not ensure that the model data will be signed in its entirety.");
-            vec![file_path.to_path_buf()]
-        }
+        get_paths_for(format, file_path)?
     } else {
         let mut unique = HashSet::new();
 
         // collect all files in the directory
-        for entry in glob(file_path.join("**/*.*").to_str().unwrap())? {
+        for entry in glob(file_path.join("**/*").to_str().unwrap())? {
             match entry {
                 Ok(path) => {
                     if path.is_file() {
-                        // determine handler
-                        if let Ok(handler) = crate::core::handlers::handler_for(
-                            format.clone(),
-                            &path,
-                            Scope::Signing,
-                        ) {
-                            // add only if handled
-                            unique.extend(handler.paths_to_sign(&path)?);
-                        }
+                        unique.extend(get_paths_for(format.clone(), &path)?);
                     }
                 }
                 Err(e) => println!("{:?}", e),
@@ -124,4 +119,143 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
     println!("Signature verified");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_get_paths_single_file() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let file_path = temp_dir.path().join("model.safetensors");
+        File::create(&file_path)?;
+
+        let paths = get_paths_of_interest(None, &file_path)?;
+        assert_eq!(paths.len(), 1);
+        assert_eq!(paths[0], file_path);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_paths_directory() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+
+        // Create multiple files
+        File::create(temp_dir.path().join("model.safetensors"))?;
+        File::create(temp_dir.path().join("model.bin"))?;
+        File::create(temp_dir.path().join("other.txt"))?;
+
+        let paths = get_paths_of_interest(None, temp_dir.path())?;
+        assert_eq!(paths.len(), 3);
+
+        // Sort paths for consistent comparison
+        let mut paths: Vec<String> = paths
+            .iter()
+            .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+            .collect();
+        paths.sort();
+
+        assert_eq!(paths, vec!["model.bin", "model.safetensors", "other.txt"]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_paths_with_format_override() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+
+        // Create files with different extensions
+        File::create(temp_dir.path().join("model.custom"))?;
+        File::create(temp_dir.path().join("model.safetensors"))?;
+
+        let paths = get_paths_of_interest(
+            Some(FileType::SafeTensors),
+            &temp_dir.path().join("model.custom"),
+        )?;
+        assert_eq!(paths.len(), 1);
+        assert!(paths[0].to_string_lossy().ends_with("model.custom"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_paths_sharded_files() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+
+        // Create sharded files
+        File::create(temp_dir.path().join("model-00001-of-00002.safetensors"))?;
+        File::create(temp_dir.path().join("model-00002-of-00002.safetensors"))?;
+        File::create(temp_dir.path().join("other.txt"))?;
+
+        let paths = get_paths_of_interest(None, temp_dir.path())?;
+        assert_eq!(paths.len(), 3);
+
+        let mut paths: Vec<String> = paths
+            .iter()
+            .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+            .collect();
+        paths.sort();
+
+        assert_eq!(
+            paths,
+            vec![
+                "model-00001-of-00002.safetensors",
+                "model-00002-of-00002.safetensors",
+                "other.txt"
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_paths_nonexistent() {
+        let result = get_paths_of_interest(None, &PathBuf::from("/nonexistent/path"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_paths_nested_and_hidden() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+
+        // Create nested directory structure
+        let nested_dir = temp_dir.path().join("nested");
+        let deep_dir = nested_dir.join("deep");
+        std::fs::create_dir_all(&deep_dir)?;
+
+        // Create various files including hidden ones
+        File::create(temp_dir.path().join(".hidden"))?;
+        File::create(temp_dir.path().join("regular.txt"))?;
+        File::create(nested_dir.join(".hidden_nested"))?;
+        File::create(nested_dir.join("nested.bin"))?;
+        File::create(deep_dir.join(".very_hidden"))?;
+        File::create(deep_dir.join("deep.dat"))?;
+
+        let paths = get_paths_of_interest(None, temp_dir.path())?;
+        assert_eq!(paths.len(), 6); // Should find all 6 files
+
+        let mut paths: Vec<String> = paths
+            .iter()
+            .map(|p| p.file_name().unwrap().to_string_lossy().to_string())
+            .collect();
+        paths.sort();
+
+        assert_eq!(
+            paths,
+            vec![
+                ".hidden",
+                ".hidden_nested",
+                ".very_hidden",
+                "deep.dat",
+                "nested.bin",
+                "regular.txt"
+            ]
+        );
+
+        Ok(())
+    }
 }
