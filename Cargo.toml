@@ -2,7 +2,7 @@
 name = "tensor-man"
 description = "A small utility to inspect and validate safetensors and ONNX files."
 authors = ["Simone Margaritelli (simone@dreadnode.io)"]
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 license = "GPL-3.0"
 readme = "README.md"
