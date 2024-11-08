@@ -2,6 +2,7 @@ import torch
 import json
 import os
 import argparse
+import numpy as np
 
 
 def main():
@@ -51,6 +52,13 @@ def main():
         model = model["model"]
 
     for tensor_name, tensor in model.items():
+        # make sure it's a tensor
+        if not isinstance(tensor, torch.Tensor):
+            try:
+                tensor = torch.tensor(tensor)
+            except:
+                continue
+
         inspection["data_size"] += tensor.shape.numel() * tensor.element_size()
 
         shape = list(tensor.shape)
