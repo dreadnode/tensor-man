@@ -22,7 +22,13 @@ fn get_paths_for(format: Option<FileType>, file_path: &Path) -> anyhow::Result<V
         handler.paths_to_sign(file_path).map(|paths| {
             paths
                 .iter()
-                .map(|path| path.canonicalize().unwrap())
+                .map(|path| {
+                    path.canonicalize()
+                        .map_err(|e| {
+                            anyhow!("failed to canonicalize path '{}': {}", path.display(), e)
+                        })
+                        .unwrap()
+                })
                 .collect()
         })
     } else {
