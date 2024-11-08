@@ -56,6 +56,15 @@ fn build_tensor_descriptor(t_info: &GGUFTensorInfo) -> TensorDescriptor {
     }
 }
 
+fn format_parsing_error(error: &str) -> String {
+    // the GGUF library dumps the entire buffer in the error message, we don't want that.
+    if error.len() > 100 {
+        format!("failed to parse GGUF file: {}", &error[..100])
+    } else {
+        format!("failed to parse GGUF file: {}", error)
+    }
+}
+
 pub(crate) struct GGUFHandler {}
 
 impl GGUFHandler {
@@ -103,7 +112,7 @@ impl Handler for GGUFHandler {
         inspection.file_size = file.metadata()?.len();
 
         let gguf = gguf::GGUFFile::read(&buffer)
-            .map_err(|e| anyhow::anyhow!("failed to read GGUF file: {}", e))?
+            .map_err(|e| anyhow::anyhow!(format_parsing_error(&e.to_string())))?
             .unwrap_or_else(|| panic!("failed to read GGUF file {}", file_path.display()));
 
         inspection.file_type = FileType::GGUF;
