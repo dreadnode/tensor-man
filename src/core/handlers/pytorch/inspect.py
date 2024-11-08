@@ -32,6 +32,10 @@ def main():
     all_metadata = getattr(model, "_metadata") if hasattr(model, "_metadata") else {}
     model_metadata = all_metadata[""] if "" in all_metadata else {}
 
+    # some files are just a single tensor
+    if isinstance(model, torch.Tensor):
+        model = {"<unamed-single-tensor>": model}
+
     inspection = {
         "file_path": file_path,
         "file_type": "PyTorch",
