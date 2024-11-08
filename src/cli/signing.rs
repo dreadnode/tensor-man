@@ -74,7 +74,11 @@ fn get_paths_of_interest(
 
 fn signature_path(file_path: &Path, signature_path: Option<PathBuf>) -> PathBuf {
     if let Some(path) = signature_path {
-        path.canonicalize().unwrap()
+        if path.exists() {
+            path.canonicalize().unwrap()
+        } else {
+            path
+        }
     } else if file_path.is_file() {
         file_path
             .with_extension("signature")
