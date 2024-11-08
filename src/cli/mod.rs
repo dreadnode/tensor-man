@@ -87,6 +87,9 @@ pub(crate) struct SignArgs {
     /// Output signature file. If not set the original file name will be used as base name.
     #[clap(long, short = 'O')]
     output: Option<PathBuf>,
+    /// Ignore files and folders matching this pattern.
+    #[clap(long, short = 'I')]
+    ignore: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -102,6 +105,9 @@ pub(crate) struct VerifyArgs {
     /// Signature file. If not set the file name will be used as base name.
     #[clap(long, short = 'S')]
     signature: Option<PathBuf>,
+    /// Ignore files and folders matching this pattern.
+    #[clap(long, short = 'I')]
+    ignore: Option<String>,
 }
 
 #[derive(Debug, Args)]

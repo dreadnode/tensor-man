@@ -33,6 +33,7 @@ fn get_paths_for(format: Option<FileType>, file_path: &Path) -> anyhow::Result<V
 fn get_paths_of_interest(
     format: Option<FileType>,
     file_path: &Path,
+    ignore: Option<String>,
 ) -> anyhow::Result<Vec<PathBuf>> {
     let paths = if file_path.is_file() {
         // single file case
@@ -53,6 +54,15 @@ fn get_paths_of_interest(
         }
 
         unique.into_iter().collect::<Vec<PathBuf>>()
+    };
+
+    let paths = if let Some(ignore_pattern) = ignore {
+        paths
+            .into_iter()
+            .filter(|path| !path.to_string_lossy().contains(&ignore_pattern))
+            .collect()
+    } else {
+        paths
     };
 
     if paths.is_empty() {
@@ -79,7 +89,7 @@ pub(crate) fn sign(args: SignArgs) -> anyhow::Result<()> {
     // load the private key for signing
     let signing_key = crate::core::signing::load_key(&args.key_path)?;
     // get the paths to sign
-    let mut paths_to_sign = get_paths_of_interest(args.format, &args.file_path)?;
+    let mut paths_to_sign = get_paths_of_interest(args.format, &args.file_path, args.ignore)?;
     let base_path = if args.file_path.is_file() {
         args.file_path.parent().unwrap().to_path_buf()
     } else {
@@ -119,7 +129,7 @@ pub(crate) fn verify(args: VerifyArgs) -> anyhow::Result<()> {
     // load the public key to verify against
     let mut manifest = Manifest::from_public_key_path(&base_path, &args.key_path)?;
     // get the paths to verify
-    let mut paths_to_verify = get_paths_of_interest(args.format, &args.file_path)?;
+    let mut paths_to_verify = get_paths_of_interest(args.format, &args.file_path, args.ignore)?;
     // remove the signature file from the list
     paths_to_verify.retain(|p| p != &signature_path);
 
@@ -144,7 +154,7 @@ mod tests {
 
         File::create(&file_path)?;
 
-        let paths = get_paths_of_interest(None, &file_path)?;
+        let paths = get_paths_of_interest(None, &file_path, None)?;
         assert_eq!(paths.len(), 1);
         assert_eq!(paths[0], file_path.canonicalize()?);
 
@@ -160,7 +170,7 @@ mod tests {
         File::create(temp_dir.path().join("model.bin"))?;
         File::create(temp_dir.path().join("other.txt"))?;
 
-        let paths = get_paths_of_interest(None, temp_dir.path())?;
+        let paths = get_paths_of_interest(None, temp_dir.path(), None)?;
         assert_eq!(paths.len(), 3);
 
         // Sort paths for consistent comparison
@@ -186,6 +196,7 @@ mod tests {
         let paths = get_paths_of_interest(
             Some(FileType::SafeTensors),
             &temp_dir.path().join("model.custom"),
+            None,
         )?;
         assert_eq!(paths.len(), 1);
         assert!(paths[0].to_string_lossy().ends_with("model.custom"));
@@ -202,7 +213,7 @@ mod tests {
         File::create(temp_dir.path().join("model-00002-of-00002.safetensors"))?;
         File::create(temp_dir.path().join("other.txt"))?;
 
-        let paths = get_paths_of_interest(None, temp_dir.path())?;
+        let paths = get_paths_of_interest(None, temp_dir.path(), None)?;
         assert_eq!(paths.len(), 3);
 
         let mut paths: Vec<String> = paths
@@ -225,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_get_paths_nonexistent() {
-        let result = get_paths_of_interest(None, &PathBuf::from("/nonexistent/path"));
+        let result = get_paths_of_interest(None, &PathBuf::from("/nonexistent/path"), None);
         assert!(result.is_err());
     }
 
@@ -246,7 +257,7 @@ mod tests {
         File::create(deep_dir.join(".very_hidden"))?;
         File::create(deep_dir.join("deep.dat"))?;
 
-        let paths = get_paths_of_interest(None, temp_dir.path())?;
+        let paths = get_paths_of_interest(None, temp_dir.path(), None)?;
         assert_eq!(paths.len(), 6); // Should find all 6 files
 
         let mut paths: Vec<String> = paths
@@ -277,7 +288,7 @@ mod tests {
         File::create(&file_path)?;
 
         // Get paths using absolute path first to verify it works
-        let paths = get_paths_of_interest(None, &file_path)?;
+        let paths = get_paths_of_interest(None, &file_path, None)?;
         assert_eq!(paths.len(), 1);
         let canonical_path = file_path.canonicalize()?;
         assert_eq!(&paths[0], &canonical_path);
@@ -287,7 +298,7 @@ mod tests {
 
         // Get paths using relative path
         let relative_path = PathBuf::from("test.txt");
-        let paths = get_paths_of_interest(None, &relative_path)?;
+        let paths = get_paths_of_interest(None, &relative_path, None)?;
 
         assert_eq!(paths.len(), 1);
         let returned_path = &paths[0];
@@ -295,6 +306,30 @@ mod tests {
         // Verify the returned path is absolute and canonicalized
         assert!(returned_path.is_absolute());
         assert_eq!(returned_path, &canonical_path);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_paths_with_huggingface_cache_ignore() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+
+        // Create a .cache/huggingface directory with a file
+        let cache_dir = temp_dir.path().join(".cache").join("huggingface");
+        std::fs::create_dir_all(&cache_dir)?;
+        File::create(cache_dir.join("cached_file.bin"))?;
+
+        // Create a regular file
+        let regular_file = temp_dir.path().join("model.onnx");
+        File::create(&regular_file)?;
+
+        // Get paths with huggingface cache ignore pattern
+        let paths =
+            get_paths_of_interest(None, &regular_file, Some(".cache/huggingface".to_string()))?;
+
+        // Should only return the regular file
+        assert_eq!(paths.len(), 1);
+        assert_eq!(&paths[0], &regular_file.canonicalize()?);
 
         Ok(())
     }
