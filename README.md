@@ -8,6 +8,8 @@
   <a href="https://github.com/dreadnode/tensor-man/blob/master/LICENSE.md"><img alt="Software License" src="https://img.shields.io/badge/license-GPL3-brightgreen.svg?style=flat-square"></a>
 </p>
 
+# tensor-man
+
 `tensor-man` is a utility to inspect, validate, sign and verify machine learning model files.
 
 ## Supported Formats
